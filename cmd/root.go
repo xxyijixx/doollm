@@ -6,7 +6,6 @@ package cmd
 import (
 	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 
@@ -23,10 +22,5 @@ func Execute() {
 }
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		panic(err)
-	}
-
 	rootCmd.AddCommand(upCmd)
 }

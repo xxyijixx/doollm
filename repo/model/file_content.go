@@ -8,7 +8,6 @@ import (
 
 const TableNameFileContent = "pre_file_contents"
 
-// FileContent mapped from table <pre_file_contents>
 type FileContent struct {
 	ID        int64          `gorm:"column:id;primaryKey;autoIncrement:true" json:"id"`
 	Fid       int64          `gorm:"column:fid;comment:文件ID" json:"fid"`
@@ -21,7 +20,6 @@ type FileContent struct {
 	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at" json:"deleted_at"`
 }
 
-// TableName FileContent's table name
 func (*FileContent) TableName() string {
 	return TableNameFileContent
 }

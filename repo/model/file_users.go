@@ -6,7 +6,6 @@ import (
 
 const TableNameFileUser = "pre_file_users"
 
-// FileUser mapped from table <pre_file_users>
 type FileUser struct {
 	ID         int64     `gorm:"column:id;primaryKey;autoIncrement:true" json:"id"`
 	FileID     int64     `gorm:"column:file_id;comment:项目ID" json:"file_id"`
@@ -16,7 +15,6 @@ type FileUser struct {
 	UpdatedAt  time.Time `gorm:"column:updated_at" json:"updated_at"`
 }
 
-// TableName FileUser's table name
 func (*FileUser) TableName() string {
 	return TableNameFileUser
 }
