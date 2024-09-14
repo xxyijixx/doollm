@@ -2,20 +2,15 @@ package main
 
 import (
 	"doollm/config"
+	"doollm/repo/model"
 	"fmt"
 
-	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 func main() {
 	var err error
-	err = godotenv.Load()
-	if err != nil {
-		panic(err)
-	}
-
 	dsn := config.EnvConfig.GetDSN()
 	db, err := gorm.Open(
 		mysql.New(
@@ -27,9 +22,8 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("db connection failed: %v", err))
 	}
-	_ = db
-	// err = db.AutoMigrate()
-	// if err != nil {
-	// 	panic(fmt.Errorf("db migrate failed: %v", err))
-	// }
+	err = db.AutoMigrate(&model.LlmDocument{})
+	if err != nil {
+		panic(fmt.Errorf("db migrate failed: %v", err))
+	}
 }

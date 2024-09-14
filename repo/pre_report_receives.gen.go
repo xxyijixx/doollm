@@ -19,31 +19,31 @@ import (
 	"doollm/repo/model"
 )
 
-func newReportReceife(db *gorm.DB, opts ...gen.DOOption) reportReceife {
-	_reportReceife := reportReceife{}
+func newReportReceive(db *gorm.DB, opts ...gen.DOOption) reportReceive {
+	_reportReceive := reportReceive{}
 
-	_reportReceife.reportReceifeDo.UseDB(db, opts...)
-	_reportReceife.reportReceifeDo.UseModel(&model.ReportReceife{})
+	_reportReceive.reportReceiveDo.UseDB(db, opts...)
+	_reportReceive.reportReceiveDo.UseModel(&model.ReportReceive{})
 
-	tableName := _reportReceife.reportReceifeDo.TableName()
-	_reportReceife.ALL = field.NewAsterisk(tableName)
-	_reportReceife.ID = field.NewInt64(tableName, "id")
-	_reportReceife.Rid = field.NewInt32(tableName, "rid")
-	_reportReceife.ReceiveTime = field.NewTime(tableName, "receive_time")
-	_reportReceife.Userid = field.NewInt64(tableName, "userid")
-	_reportReceife.Read = field.NewInt32(tableName, "read")
+	tableName := _reportReceive.reportReceiveDo.TableName()
+	_reportReceive.ALL = field.NewAsterisk(tableName)
+	_reportReceive.ID = field.NewInt64(tableName, "id")
+	_reportReceive.Rid = field.NewInt64(tableName, "rid")
+	_reportReceive.ReceiveTime = field.NewTime(tableName, "receive_time")
+	_reportReceive.Userid = field.NewInt64(tableName, "userid")
+	_reportReceive.Read = field.NewInt32(tableName, "read")
 
-	_reportReceife.fillFieldMap()
+	_reportReceive.fillFieldMap()
 
-	return _reportReceife
+	return _reportReceive
 }
 
-type reportReceife struct {
-	reportReceifeDo reportReceifeDo
+type reportReceive struct {
+	reportReceiveDo reportReceiveDo
 
 	ALL         field.Asterisk
 	ID          field.Int64
-	Rid         field.Int32
+	Rid         field.Int64
 	ReceiveTime field.Time
 	Userid      field.Int64
 	Read        field.Int32
@@ -51,20 +51,20 @@ type reportReceife struct {
 	fieldMap map[string]field.Expr
 }
 
-func (r reportReceife) Table(newTableName string) *reportReceife {
-	r.reportReceifeDo.UseTable(newTableName)
+func (r reportReceive) Table(newTableName string) *reportReceive {
+	r.reportReceiveDo.UseTable(newTableName)
 	return r.updateTableName(newTableName)
 }
 
-func (r reportReceife) As(alias string) *reportReceife {
-	r.reportReceifeDo.DO = *(r.reportReceifeDo.As(alias).(*gen.DO))
+func (r reportReceive) As(alias string) *reportReceive {
+	r.reportReceiveDo.DO = *(r.reportReceiveDo.As(alias).(*gen.DO))
 	return r.updateTableName(alias)
 }
 
-func (r *reportReceife) updateTableName(table string) *reportReceife {
+func (r *reportReceive) updateTableName(table string) *reportReceive {
 	r.ALL = field.NewAsterisk(table)
 	r.ID = field.NewInt64(table, "id")
-	r.Rid = field.NewInt32(table, "rid")
+	r.Rid = field.NewInt64(table, "rid")
 	r.ReceiveTime = field.NewTime(table, "receive_time")
 	r.Userid = field.NewInt64(table, "userid")
 	r.Read = field.NewInt32(table, "read")
@@ -74,19 +74,19 @@ func (r *reportReceife) updateTableName(table string) *reportReceife {
 	return r
 }
 
-func (r *reportReceife) WithContext(ctx context.Context) IReportReceifeDo {
-	return r.reportReceifeDo.WithContext(ctx)
+func (r *reportReceive) WithContext(ctx context.Context) IReportReceiveDo {
+	return r.reportReceiveDo.WithContext(ctx)
 }
 
-func (r reportReceife) TableName() string { return r.reportReceifeDo.TableName() }
+func (r reportReceive) TableName() string { return r.reportReceiveDo.TableName() }
 
-func (r reportReceife) Alias() string { return r.reportReceifeDo.Alias() }
+func (r reportReceive) Alias() string { return r.reportReceiveDo.Alias() }
 
-func (r reportReceife) Columns(cols ...field.Expr) gen.Columns {
-	return r.reportReceifeDo.Columns(cols...)
+func (r reportReceive) Columns(cols ...field.Expr) gen.Columns {
+	return r.reportReceiveDo.Columns(cols...)
 }
 
-func (r *reportReceife) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
+func (r *reportReceive) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 	_f, ok := r.fieldMap[fieldName]
 	if !ok || _f == nil {
 		return nil, false
@@ -95,7 +95,7 @@ func (r *reportReceife) GetFieldByName(fieldName string) (field.OrderExpr, bool)
 	return _oe, ok
 }
 
-func (r *reportReceife) fillFieldMap() {
+func (r *reportReceive) fillFieldMap() {
 	r.fieldMap = make(map[string]field.Expr, 5)
 	r.fieldMap["id"] = r.ID
 	r.fieldMap["rid"] = r.Rid
@@ -104,58 +104,58 @@ func (r *reportReceife) fillFieldMap() {
 	r.fieldMap["read"] = r.Read
 }
 
-func (r reportReceife) clone(db *gorm.DB) reportReceife {
-	r.reportReceifeDo.ReplaceConnPool(db.Statement.ConnPool)
+func (r reportReceive) clone(db *gorm.DB) reportReceive {
+	r.reportReceiveDo.ReplaceConnPool(db.Statement.ConnPool)
 	return r
 }
 
-func (r reportReceife) replaceDB(db *gorm.DB) reportReceife {
-	r.reportReceifeDo.ReplaceDB(db)
+func (r reportReceive) replaceDB(db *gorm.DB) reportReceive {
+	r.reportReceiveDo.ReplaceDB(db)
 	return r
 }
 
-type reportReceifeDo struct{ gen.DO }
+type reportReceiveDo struct{ gen.DO }
 
-type IReportReceifeDo interface {
+type IReportReceiveDo interface {
 	gen.SubQuery
-	Debug() IReportReceifeDo
-	WithContext(ctx context.Context) IReportReceifeDo
+	Debug() IReportReceiveDo
+	WithContext(ctx context.Context) IReportReceiveDo
 	WithResult(fc func(tx gen.Dao)) gen.ResultInfo
 	ReplaceDB(db *gorm.DB)
-	ReadDB() IReportReceifeDo
-	WriteDB() IReportReceifeDo
+	ReadDB() IReportReceiveDo
+	WriteDB() IReportReceiveDo
 	As(alias string) gen.Dao
-	Session(config *gorm.Session) IReportReceifeDo
+	Session(config *gorm.Session) IReportReceiveDo
 	Columns(cols ...field.Expr) gen.Columns
-	Clauses(conds ...clause.Expression) IReportReceifeDo
-	Not(conds ...gen.Condition) IReportReceifeDo
-	Or(conds ...gen.Condition) IReportReceifeDo
-	Select(conds ...field.Expr) IReportReceifeDo
-	Where(conds ...gen.Condition) IReportReceifeDo
-	Order(conds ...field.Expr) IReportReceifeDo
-	Distinct(cols ...field.Expr) IReportReceifeDo
-	Omit(cols ...field.Expr) IReportReceifeDo
-	Join(table schema.Tabler, on ...field.Expr) IReportReceifeDo
-	LeftJoin(table schema.Tabler, on ...field.Expr) IReportReceifeDo
-	RightJoin(table schema.Tabler, on ...field.Expr) IReportReceifeDo
-	Group(cols ...field.Expr) IReportReceifeDo
-	Having(conds ...gen.Condition) IReportReceifeDo
-	Limit(limit int) IReportReceifeDo
-	Offset(offset int) IReportReceifeDo
+	Clauses(conds ...clause.Expression) IReportReceiveDo
+	Not(conds ...gen.Condition) IReportReceiveDo
+	Or(conds ...gen.Condition) IReportReceiveDo
+	Select(conds ...field.Expr) IReportReceiveDo
+	Where(conds ...gen.Condition) IReportReceiveDo
+	Order(conds ...field.Expr) IReportReceiveDo
+	Distinct(cols ...field.Expr) IReportReceiveDo
+	Omit(cols ...field.Expr) IReportReceiveDo
+	Join(table schema.Tabler, on ...field.Expr) IReportReceiveDo
+	LeftJoin(table schema.Tabler, on ...field.Expr) IReportReceiveDo
+	RightJoin(table schema.Tabler, on ...field.Expr) IReportReceiveDo
+	Group(cols ...field.Expr) IReportReceiveDo
+	Having(conds ...gen.Condition) IReportReceiveDo
+	Limit(limit int) IReportReceiveDo
+	Offset(offset int) IReportReceiveDo
 	Count() (count int64, err error)
-	Scopes(funcs ...func(gen.Dao) gen.Dao) IReportReceifeDo
-	Unscoped() IReportReceifeDo
-	Create(values ...*model.ReportReceife) error
-	CreateInBatches(values []*model.ReportReceife, batchSize int) error
-	Save(values ...*model.ReportReceife) error
-	First() (*model.ReportReceife, error)
-	Take() (*model.ReportReceife, error)
-	Last() (*model.ReportReceife, error)
-	Find() ([]*model.ReportReceife, error)
-	FindInBatch(batchSize int, fc func(tx gen.Dao, batch int) error) (results []*model.ReportReceife, err error)
-	FindInBatches(result *[]*model.ReportReceife, batchSize int, fc func(tx gen.Dao, batch int) error) error
+	Scopes(funcs ...func(gen.Dao) gen.Dao) IReportReceiveDo
+	Unscoped() IReportReceiveDo
+	Create(values ...*model.ReportReceive) error
+	CreateInBatches(values []*model.ReportReceive, batchSize int) error
+	Save(values ...*model.ReportReceive) error
+	First() (*model.ReportReceive, error)
+	Take() (*model.ReportReceive, error)
+	Last() (*model.ReportReceive, error)
+	Find() ([]*model.ReportReceive, error)
+	FindInBatch(batchSize int, fc func(tx gen.Dao, batch int) error) (results []*model.ReportReceive, err error)
+	FindInBatches(result *[]*model.ReportReceive, batchSize int, fc func(tx gen.Dao, batch int) error) error
 	Pluck(column field.Expr, dest interface{}) error
-	Delete(...*model.ReportReceife) (info gen.ResultInfo, err error)
+	Delete(...*model.ReportReceive) (info gen.ResultInfo, err error)
 	Update(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
 	UpdateSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
 	Updates(value interface{}) (info gen.ResultInfo, err error)
@@ -163,163 +163,163 @@ type IReportReceifeDo interface {
 	UpdateColumnSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
 	UpdateColumns(value interface{}) (info gen.ResultInfo, err error)
 	UpdateFrom(q gen.SubQuery) gen.Dao
-	Attrs(attrs ...field.AssignExpr) IReportReceifeDo
-	Assign(attrs ...field.AssignExpr) IReportReceifeDo
-	Joins(fields ...field.RelationField) IReportReceifeDo
-	Preload(fields ...field.RelationField) IReportReceifeDo
-	FirstOrInit() (*model.ReportReceife, error)
-	FirstOrCreate() (*model.ReportReceife, error)
-	FindByPage(offset int, limit int) (result []*model.ReportReceife, count int64, err error)
+	Attrs(attrs ...field.AssignExpr) IReportReceiveDo
+	Assign(attrs ...field.AssignExpr) IReportReceiveDo
+	Joins(fields ...field.RelationField) IReportReceiveDo
+	Preload(fields ...field.RelationField) IReportReceiveDo
+	FirstOrInit() (*model.ReportReceive, error)
+	FirstOrCreate() (*model.ReportReceive, error)
+	FindByPage(offset int, limit int) (result []*model.ReportReceive, count int64, err error)
 	ScanByPage(result interface{}, offset int, limit int) (count int64, err error)
 	Scan(result interface{}) (err error)
-	Returning(value interface{}, columns ...string) IReportReceifeDo
+	Returning(value interface{}, columns ...string) IReportReceiveDo
 	UnderlyingDB() *gorm.DB
 	schema.Tabler
 }
 
-func (r reportReceifeDo) Debug() IReportReceifeDo {
+func (r reportReceiveDo) Debug() IReportReceiveDo {
 	return r.withDO(r.DO.Debug())
 }
 
-func (r reportReceifeDo) WithContext(ctx context.Context) IReportReceifeDo {
+func (r reportReceiveDo) WithContext(ctx context.Context) IReportReceiveDo {
 	return r.withDO(r.DO.WithContext(ctx))
 }
 
-func (r reportReceifeDo) ReadDB() IReportReceifeDo {
+func (r reportReceiveDo) ReadDB() IReportReceiveDo {
 	return r.Clauses(dbresolver.Read)
 }
 
-func (r reportReceifeDo) WriteDB() IReportReceifeDo {
+func (r reportReceiveDo) WriteDB() IReportReceiveDo {
 	return r.Clauses(dbresolver.Write)
 }
 
-func (r reportReceifeDo) Session(config *gorm.Session) IReportReceifeDo {
+func (r reportReceiveDo) Session(config *gorm.Session) IReportReceiveDo {
 	return r.withDO(r.DO.Session(config))
 }
 
-func (r reportReceifeDo) Clauses(conds ...clause.Expression) IReportReceifeDo {
+func (r reportReceiveDo) Clauses(conds ...clause.Expression) IReportReceiveDo {
 	return r.withDO(r.DO.Clauses(conds...))
 }
 
-func (r reportReceifeDo) Returning(value interface{}, columns ...string) IReportReceifeDo {
+func (r reportReceiveDo) Returning(value interface{}, columns ...string) IReportReceiveDo {
 	return r.withDO(r.DO.Returning(value, columns...))
 }
 
-func (r reportReceifeDo) Not(conds ...gen.Condition) IReportReceifeDo {
+func (r reportReceiveDo) Not(conds ...gen.Condition) IReportReceiveDo {
 	return r.withDO(r.DO.Not(conds...))
 }
 
-func (r reportReceifeDo) Or(conds ...gen.Condition) IReportReceifeDo {
+func (r reportReceiveDo) Or(conds ...gen.Condition) IReportReceiveDo {
 	return r.withDO(r.DO.Or(conds...))
 }
 
-func (r reportReceifeDo) Select(conds ...field.Expr) IReportReceifeDo {
+func (r reportReceiveDo) Select(conds ...field.Expr) IReportReceiveDo {
 	return r.withDO(r.DO.Select(conds...))
 }
 
-func (r reportReceifeDo) Where(conds ...gen.Condition) IReportReceifeDo {
+func (r reportReceiveDo) Where(conds ...gen.Condition) IReportReceiveDo {
 	return r.withDO(r.DO.Where(conds...))
 }
 
-func (r reportReceifeDo) Order(conds ...field.Expr) IReportReceifeDo {
+func (r reportReceiveDo) Order(conds ...field.Expr) IReportReceiveDo {
 	return r.withDO(r.DO.Order(conds...))
 }
 
-func (r reportReceifeDo) Distinct(cols ...field.Expr) IReportReceifeDo {
+func (r reportReceiveDo) Distinct(cols ...field.Expr) IReportReceiveDo {
 	return r.withDO(r.DO.Distinct(cols...))
 }
 
-func (r reportReceifeDo) Omit(cols ...field.Expr) IReportReceifeDo {
+func (r reportReceiveDo) Omit(cols ...field.Expr) IReportReceiveDo {
 	return r.withDO(r.DO.Omit(cols...))
 }
 
-func (r reportReceifeDo) Join(table schema.Tabler, on ...field.Expr) IReportReceifeDo {
+func (r reportReceiveDo) Join(table schema.Tabler, on ...field.Expr) IReportReceiveDo {
 	return r.withDO(r.DO.Join(table, on...))
 }
 
-func (r reportReceifeDo) LeftJoin(table schema.Tabler, on ...field.Expr) IReportReceifeDo {
+func (r reportReceiveDo) LeftJoin(table schema.Tabler, on ...field.Expr) IReportReceiveDo {
 	return r.withDO(r.DO.LeftJoin(table, on...))
 }
 
-func (r reportReceifeDo) RightJoin(table schema.Tabler, on ...field.Expr) IReportReceifeDo {
+func (r reportReceiveDo) RightJoin(table schema.Tabler, on ...field.Expr) IReportReceiveDo {
 	return r.withDO(r.DO.RightJoin(table, on...))
 }
 
-func (r reportReceifeDo) Group(cols ...field.Expr) IReportReceifeDo {
+func (r reportReceiveDo) Group(cols ...field.Expr) IReportReceiveDo {
 	return r.withDO(r.DO.Group(cols...))
 }
 
-func (r reportReceifeDo) Having(conds ...gen.Condition) IReportReceifeDo {
+func (r reportReceiveDo) Having(conds ...gen.Condition) IReportReceiveDo {
 	return r.withDO(r.DO.Having(conds...))
 }
 
-func (r reportReceifeDo) Limit(limit int) IReportReceifeDo {
+func (r reportReceiveDo) Limit(limit int) IReportReceiveDo {
 	return r.withDO(r.DO.Limit(limit))
 }
 
-func (r reportReceifeDo) Offset(offset int) IReportReceifeDo {
+func (r reportReceiveDo) Offset(offset int) IReportReceiveDo {
 	return r.withDO(r.DO.Offset(offset))
 }
 
-func (r reportReceifeDo) Scopes(funcs ...func(gen.Dao) gen.Dao) IReportReceifeDo {
+func (r reportReceiveDo) Scopes(funcs ...func(gen.Dao) gen.Dao) IReportReceiveDo {
 	return r.withDO(r.DO.Scopes(funcs...))
 }
 
-func (r reportReceifeDo) Unscoped() IReportReceifeDo {
+func (r reportReceiveDo) Unscoped() IReportReceiveDo {
 	return r.withDO(r.DO.Unscoped())
 }
 
-func (r reportReceifeDo) Create(values ...*model.ReportReceife) error {
+func (r reportReceiveDo) Create(values ...*model.ReportReceive) error {
 	if len(values) == 0 {
 		return nil
 	}
 	return r.DO.Create(values)
 }
 
-func (r reportReceifeDo) CreateInBatches(values []*model.ReportReceife, batchSize int) error {
+func (r reportReceiveDo) CreateInBatches(values []*model.ReportReceive, batchSize int) error {
 	return r.DO.CreateInBatches(values, batchSize)
 }
 
 // Save : !!! underlying implementation is different with GORM
 // The method is equivalent to executing the statement: db.Clauses(clause.OnConflict{UpdateAll: true}).Create(values)
-func (r reportReceifeDo) Save(values ...*model.ReportReceife) error {
+func (r reportReceiveDo) Save(values ...*model.ReportReceive) error {
 	if len(values) == 0 {
 		return nil
 	}
 	return r.DO.Save(values)
 }
 
-func (r reportReceifeDo) First() (*model.ReportReceife, error) {
+func (r reportReceiveDo) First() (*model.ReportReceive, error) {
 	if result, err := r.DO.First(); err != nil {
 		return nil, err
 	} else {
-		return result.(*model.ReportReceife), nil
+		return result.(*model.ReportReceive), nil
 	}
 }
 
-func (r reportReceifeDo) Take() (*model.ReportReceife, error) {
+func (r reportReceiveDo) Take() (*model.ReportReceive, error) {
 	if result, err := r.DO.Take(); err != nil {
 		return nil, err
 	} else {
-		return result.(*model.ReportReceife), nil
+		return result.(*model.ReportReceive), nil
 	}
 }
 
-func (r reportReceifeDo) Last() (*model.ReportReceife, error) {
+func (r reportReceiveDo) Last() (*model.ReportReceive, error) {
 	if result, err := r.DO.Last(); err != nil {
 		return nil, err
 	} else {
-		return result.(*model.ReportReceife), nil
+		return result.(*model.ReportReceive), nil
 	}
 }
 
-func (r reportReceifeDo) Find() ([]*model.ReportReceife, error) {
+func (r reportReceiveDo) Find() ([]*model.ReportReceive, error) {
 	result, err := r.DO.Find()
-	return result.([]*model.ReportReceife), err
+	return result.([]*model.ReportReceive), err
 }
 
-func (r reportReceifeDo) FindInBatch(batchSize int, fc func(tx gen.Dao, batch int) error) (results []*model.ReportReceife, err error) {
-	buf := make([]*model.ReportReceife, 0, batchSize)
+func (r reportReceiveDo) FindInBatch(batchSize int, fc func(tx gen.Dao, batch int) error) (results []*model.ReportReceive, err error) {
+	buf := make([]*model.ReportReceive, 0, batchSize)
 	err = r.DO.FindInBatches(&buf, batchSize, func(tx gen.Dao, batch int) error {
 		defer func() { results = append(results, buf...) }()
 		return fc(tx, batch)
@@ -327,49 +327,49 @@ func (r reportReceifeDo) FindInBatch(batchSize int, fc func(tx gen.Dao, batch in
 	return results, err
 }
 
-func (r reportReceifeDo) FindInBatches(result *[]*model.ReportReceife, batchSize int, fc func(tx gen.Dao, batch int) error) error {
+func (r reportReceiveDo) FindInBatches(result *[]*model.ReportReceive, batchSize int, fc func(tx gen.Dao, batch int) error) error {
 	return r.DO.FindInBatches(result, batchSize, fc)
 }
 
-func (r reportReceifeDo) Attrs(attrs ...field.AssignExpr) IReportReceifeDo {
+func (r reportReceiveDo) Attrs(attrs ...field.AssignExpr) IReportReceiveDo {
 	return r.withDO(r.DO.Attrs(attrs...))
 }
 
-func (r reportReceifeDo) Assign(attrs ...field.AssignExpr) IReportReceifeDo {
+func (r reportReceiveDo) Assign(attrs ...field.AssignExpr) IReportReceiveDo {
 	return r.withDO(r.DO.Assign(attrs...))
 }
 
-func (r reportReceifeDo) Joins(fields ...field.RelationField) IReportReceifeDo {
+func (r reportReceiveDo) Joins(fields ...field.RelationField) IReportReceiveDo {
 	for _, _f := range fields {
 		r = *r.withDO(r.DO.Joins(_f))
 	}
 	return &r
 }
 
-func (r reportReceifeDo) Preload(fields ...field.RelationField) IReportReceifeDo {
+func (r reportReceiveDo) Preload(fields ...field.RelationField) IReportReceiveDo {
 	for _, _f := range fields {
 		r = *r.withDO(r.DO.Preload(_f))
 	}
 	return &r
 }
 
-func (r reportReceifeDo) FirstOrInit() (*model.ReportReceife, error) {
+func (r reportReceiveDo) FirstOrInit() (*model.ReportReceive, error) {
 	if result, err := r.DO.FirstOrInit(); err != nil {
 		return nil, err
 	} else {
-		return result.(*model.ReportReceife), nil
+		return result.(*model.ReportReceive), nil
 	}
 }
 
-func (r reportReceifeDo) FirstOrCreate() (*model.ReportReceife, error) {
+func (r reportReceiveDo) FirstOrCreate() (*model.ReportReceive, error) {
 	if result, err := r.DO.FirstOrCreate(); err != nil {
 		return nil, err
 	} else {
-		return result.(*model.ReportReceife), nil
+		return result.(*model.ReportReceive), nil
 	}
 }
 
-func (r reportReceifeDo) FindByPage(offset int, limit int) (result []*model.ReportReceife, count int64, err error) {
+func (r reportReceiveDo) FindByPage(offset int, limit int) (result []*model.ReportReceive, count int64, err error) {
 	result, err = r.Offset(offset).Limit(limit).Find()
 	if err != nil {
 		return
@@ -384,7 +384,7 @@ func (r reportReceifeDo) FindByPage(offset int, limit int) (result []*model.Repo
 	return
 }
 
-func (r reportReceifeDo) ScanByPage(result interface{}, offset int, limit int) (count int64, err error) {
+func (r reportReceiveDo) ScanByPage(result interface{}, offset int, limit int) (count int64, err error) {
 	count, err = r.Count()
 	if err != nil {
 		return
@@ -394,15 +394,15 @@ func (r reportReceifeDo) ScanByPage(result interface{}, offset int, limit int) (
 	return
 }
 
-func (r reportReceifeDo) Scan(result interface{}) (err error) {
+func (r reportReceiveDo) Scan(result interface{}) (err error) {
 	return r.DO.Scan(result)
 }
 
-func (r reportReceifeDo) Delete(models ...*model.ReportReceife) (result gen.ResultInfo, err error) {
+func (r reportReceiveDo) Delete(models ...*model.ReportReceive) (result gen.ResultInfo, err error) {
 	return r.DO.Delete(models)
 }
 
-func (r *reportReceifeDo) withDO(do gen.Dao) *reportReceifeDo {
+func (r *reportReceiveDo) withDO(do gen.Dao) *reportReceiveDo {
 	r.DO = *do.(*gen.DO)
 	return r
 }

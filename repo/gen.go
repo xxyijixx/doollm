@@ -20,8 +20,10 @@ var (
 	File          *file
 	FileContent   *fileContent
 	FileUser      *fileUser
+	LlmDocument   *llmDocument
 	Report        *report
-	ReportReceife *reportReceife
+	ReportReceive *reportReceive
+	User          *user
 )
 
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
@@ -29,8 +31,10 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	File = &Q.File
 	FileContent = &Q.FileContent
 	FileUser = &Q.FileUser
+	LlmDocument = &Q.LlmDocument
 	Report = &Q.Report
-	ReportReceife = &Q.ReportReceife
+	ReportReceive = &Q.ReportReceive
+	User = &Q.User
 }
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
@@ -39,8 +43,10 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		File:          newFile(db, opts...),
 		FileContent:   newFileContent(db, opts...),
 		FileUser:      newFileUser(db, opts...),
+		LlmDocument:   newLlmDocument(db, opts...),
 		Report:        newReport(db, opts...),
-		ReportReceife: newReportReceife(db, opts...),
+		ReportReceive: newReportReceive(db, opts...),
+		User:          newUser(db, opts...),
 	}
 }
 
@@ -50,8 +56,10 @@ type Query struct {
 	File          file
 	FileContent   fileContent
 	FileUser      fileUser
+	LlmDocument   llmDocument
 	Report        report
-	ReportReceife reportReceife
+	ReportReceive reportReceive
+	User          user
 }
 
 func (q *Query) Available() bool { return q.db != nil }
@@ -62,8 +70,10 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		File:          q.File.clone(db),
 		FileContent:   q.FileContent.clone(db),
 		FileUser:      q.FileUser.clone(db),
+		LlmDocument:   q.LlmDocument.clone(db),
 		Report:        q.Report.clone(db),
-		ReportReceife: q.ReportReceife.clone(db),
+		ReportReceive: q.ReportReceive.clone(db),
+		User:          q.User.clone(db),
 	}
 }
 
@@ -81,8 +91,10 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		File:          q.File.replaceDB(db),
 		FileContent:   q.FileContent.replaceDB(db),
 		FileUser:      q.FileUser.replaceDB(db),
+		LlmDocument:   q.LlmDocument.replaceDB(db),
 		Report:        q.Report.replaceDB(db),
-		ReportReceife: q.ReportReceife.replaceDB(db),
+		ReportReceive: q.ReportReceive.replaceDB(db),
+		User:          q.User.replaceDB(db),
 	}
 }
 
@@ -90,8 +102,10 @@ type queryCtx struct {
 	File          IFileDo
 	FileContent   IFileContentDo
 	FileUser      IFileUserDo
+	LlmDocument   ILlmDocumentDo
 	Report        IReportDo
-	ReportReceife IReportReceifeDo
+	ReportReceive IReportReceiveDo
+	User          IUserDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
@@ -99,8 +113,10 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		File:          q.File.WithContext(ctx),
 		FileContent:   q.FileContent.WithContext(ctx),
 		FileUser:      q.FileUser.WithContext(ctx),
+		LlmDocument:   q.LlmDocument.WithContext(ctx),
 		Report:        q.Report.WithContext(ctx),
-		ReportReceife: q.ReportReceife.WithContext(ctx),
+		ReportReceive: q.ReportReceive.WithContext(ctx),
+		User:          q.User.WithContext(ctx),
 	}
 }
 

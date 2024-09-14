@@ -29,12 +29,20 @@ func init() {
 var defaultConfig = envConfigSchema{
 	ENV: "dev",
 
-	MYSQL_HOST:            "127.0.0.1",
-	MYSQL_PORT:            "49687",
-	MYSQL_USERNAME:        "dootask",
-	MYSQL_PASSWORD:        "123456",
-	MYSQL_DB_NAME:         "dootask",
+	MYSQL_HOST:     "127.0.0.1",
+	MYSQL_PORT:     "50064",
+	MYSQL_USERNAME: "dootask",
+	MYSQL_PASSWORD: "123456",
+	MYSQL_DB_NAME:  "dootask",
+	// MYSQL_HOST:            "127.0.0.1",
+	// MYSQL_PORT:            "18888",
+	// MYSQL_USERNAME:        "devlop",
+	// MYSQL_PASSWORD:        "123456",
+	// MYSQL_DB_NAME:         "devlop",
 	MAX_REQUEST_BODY_SIZE: 200 * 1024 * 1024,
+
+	LLM_SERVER_URL: "http://localhost:3001/api",
+	LLM_TOKEN:      "xxxx-xxxxx-x-xx",
 }
 
 type envConfigSchema struct {
@@ -47,6 +55,9 @@ type envConfigSchema struct {
 	MYSQL_DB_NAME  string
 
 	MAX_REQUEST_BODY_SIZE int
+
+	LLM_SERVER_URL string
+	LLM_TOKEN      string
 }
 
 func (s *envConfigSchema) IsDev() bool {
