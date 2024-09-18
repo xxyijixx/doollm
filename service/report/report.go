@@ -1,4 +1,4 @@
-package report_service
+package report
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"doollm/clients/anythingllm/system"
 	"doollm/repo"
 	"doollm/repo/model"
+	linktype "doollm/service/document/type"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -36,12 +37,6 @@ var anythingllmClient = anythingllm.NewClient()
 // Traversal 对用户的工作报告进行处理，暂时不分批处理
 func (r *ReportServiceImpl) Traversal() {
 
-	// userCount, err := repo.User.WithContext(context.Background()).Where(repo.User.Bot.Eq(0)).Count()
-	// _ = userCount
-	// if err != nil {
-	// 	log.Error("get user count fail :", err)
-	// }
-	// TODO 暂时默认全部用户都拥有访问权限
 	ctx := context.Background()
 	users, err := repo.User.WithContext(ctx).
 		Where(repo.User.Bot.Eq(0)).
@@ -68,14 +63,8 @@ func (r *ReportServiceImpl) Traversal() {
 	}
 
 	for _, report := range reports {
-		// 获取对应的用户信息
-		user, exists := userMap[report.Userid]
-		if !exists {
-			log.Warn("查询不到用户信息")
-			continue
-		}
 		document, err := repo.LlmDocument.WithContext(ctx).
-			Where(repo.LlmDocument.LinkType.Eq("report")).
+			Where(repo.LlmDocument.LinkType.Eq(linktype.REPORT)).
 			Where(repo.LlmDocument.LinkId.Eq(report.ID)).
 			Where(repo.LlmDocument.LinkParantId.Eq(0)).
 			First()
@@ -83,125 +72,93 @@ func (r *ReportServiceImpl) Traversal() {
 			log.Info("错误：", err)
 			return
 		}
-		if document != nil {
-			if document.LastModifiedAt.Equal(report.UpdatedAt) {
-				// 如果文档存在记录，并且没有修改过
-				log.Debug("如果文档存在记录，并且没有修改过")
-				continue
-			} else {
-				// 存在修改
-				log.Debug("存在修改")
-				// 用于删除知识库的文档
-				location := document.Location
-				receiveUserNames := handleReceive(ctx, *report, userMap)
-				reportJson := ReportJsonData{
-					Title:       report.Title,
-					Type:        report.Type,
-					Owner:       user.Nickname,
-					ReceiveUser: receiveUserNames,
-					Content:     report.Content,
-				}
 
-				text, err := json.Marshal(reportJson)
-				if err != nil {
-					log.Warn("Json marshal fail:", err)
-					continue
-				}
-				rowTitle := "report-" + strconv.FormatInt(report.Userid, 10) + "-" + strconv.FormatInt(report.ID, 10) + "-" + strconv.FormatInt(time.Now().Unix(), 10)
-				params := documents.RawTextParams{
-					TextContent: string(text),
-					Metadata: documents.RawTextMetadata{
-						Title: rowTitle,
-					},
-				}
-
-				res, err := anythingllmClient.UploadRowText(params)
-				if err != nil {
-					continue
-				}
-				if res.Success {
-					log.Debug(res.Documents)
-					for _, doc := range res.Documents {
-						result, err := repo.LlmDocument.WithContext(ctx).
-							Where(repo.LlmDocument.ID.Eq(document.ID)).
-							Updates(&model.LlmDocument{
-								LastModifiedAt:     report.UpdatedAt,
-								Location:           doc.Location,
-								Title:              doc.Title,
-								DocID:              doc.ID,
-								TokenCountEstimate: int64(doc.TokenCountEstimate),
-							})
-						if err != nil {
-							log.Info("更新失败: reportId=", report.ID, ";docId=", strconv.FormatInt(document.ID, 10))
-							continue
-						}
-						if result.RowsAffected > 0 {
-							log.Debug("更新成功")
-							anythingllmClient.RemoveDocument(system.RemoveDocumentParams{
-								Names: []string{
-									location,
-								},
-							})
-						}
-					}
-				}
-			}
-		} else {
-			// 知识库没有该文档
-			log.Debug("没有查询到文档信息")
-			receiveUserNames := handleReceive(ctx, *report, userMap)
-			reportJson := ReportJsonData{
-				Title:       report.Title,
-				Type:        report.Type,
-				Owner:       user.Nickname,
-				ReceiveUser: receiveUserNames,
-				Content:     report.Content,
-			}
-
-			text, err := json.Marshal(reportJson)
-			if err != nil {
-				log.Warn("Json marshal fail:", err)
-				continue
-			}
-			rowTitle := "report-" + strconv.FormatInt(report.Userid, 10) + "-" + strconv.FormatInt(report.ID, 10) + "-" + strconv.FormatInt(time.Now().Unix(), 10)
-			params := documents.RawTextParams{
-				TextContent: string(text),
-				Metadata: documents.RawTextMetadata{
-					Title: rowTitle,
-				},
-			}
-
-			res, err := anythingllmClient.UploadRowText(params)
-			if err != nil {
-				continue
-			}
-			if res.Success {
-				log.Debug(res.Documents)
-				for _, doc := range res.Documents {
-					newDocument := &model.LlmDocument{
-						LinkType:           "report",
-						LinkId:             report.ID,
-						LinkParantId:       0,
-						DocID:              doc.ID,
-						Location:           doc.Location,
-						Title:              doc.Title,
-						Userid:             report.Userid,
-						TokenCountEstimate: int64(doc.TokenCountEstimate),
-						LastModifiedAt:     report.UpdatedAt,
-						CreatedAt:          time.Now(),
-					}
-					err := repo.LlmDocument.WithContext(ctx).Create(newDocument)
-					if err != nil {
-						log.Error(err)
-					}
-				}
-			}
+		if err := r.updateOrInsertDocument(ctx, report, document, userMap); err != nil {
+			log.Error(err)
 		}
 	}
 }
 
 func (r *ReportServiceImpl) Update() {
 	panic("not implemented") // TODO: Implement
+}
+
+func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report *model.Report, document *model.LlmDocument, userMap map[int64]*model.User) error {
+	// 更新文档
+	if document.LastModifiedAt.Equal(report.UpdatedAt) {
+		log.Debugf("Report[#%d]内容没有更新", report.ID)
+		return nil
+	}
+
+	user, exists := userMap[report.Userid]
+	if !exists {
+		log.Warn("查询不到用户信息")
+	}
+	receiveUserNames := handleReceive(ctx, *report, userMap)
+	reportJson := ReportJsonData{
+		Title:       report.Title,
+		Type:        report.Type,
+		Owner:       user.Nickname,
+		ReceiveUser: receiveUserNames,
+		Content:     report.Content,
+	}
+
+	text, err := json.Marshal(reportJson)
+	if err != nil {
+		return err
+	}
+	rowTitle := "report-" + strconv.FormatInt(report.Userid, 10) + "-" + strconv.FormatInt(report.ID, 10) + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+	params := documents.RawTextParams{
+		TextContent: string(text),
+		Metadata: documents.RawTextMetadata{
+			Title: rowTitle,
+		},
+	}
+
+	res, err := anythingllmClient.UploadRowText(params)
+	if err != nil || !res.Success {
+		return err
+	}
+
+	if len(res.Documents) == 0 {
+		return nil
+	}
+	doc := res.Documents[0]
+	if document == nil {
+		// 插入新文档
+		log.Debugf("Report[#%d]内容没有上传", report.ID)
+		newDocument := &model.LlmDocument{
+			LinkType:           linktype.REPORT,
+			LinkId:             report.ID,
+			LinkParantId:       0,
+			DocID:              doc.ID,
+			Location:           doc.Location,
+			Title:              doc.Title,
+			Userid:             report.Userid,
+			TokenCountEstimate: int64(doc.TokenCountEstimate),
+			LastModifiedAt:     report.UpdatedAt,
+			CreatedAt:          time.Now(),
+		}
+		return repo.LlmDocument.WithContext(ctx).Create(newDocument)
+	}
+
+	log.Debugf("Report[#%d]内容存在更新", report.ID)
+	result, err := repo.LlmDocument.WithContext(ctx).
+		Where(repo.LlmDocument.ID.Eq(document.ID)).
+		Updates(&model.LlmDocument{
+			LastModifiedAt:     report.UpdatedAt,
+			Location:           doc.Location,
+			Title:              doc.Title,
+			DocID:              doc.ID,
+			TokenCountEstimate: int64(doc.TokenCountEstimate),
+		})
+	if err != nil || result.RowsAffected == 0 {
+		return err
+	}
+	// 移除旧文档
+	return anythingllmClient.RemoveDocument(system.RemoveDocumentParams{
+		Names: []string{document.Location},
+	})
 }
 
 // handleReceive 处理汇报对象，暂时汇报对象不进行上传

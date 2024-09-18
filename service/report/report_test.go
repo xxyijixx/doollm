@@ -1,4 +1,4 @@
-package report_service
+package report
 
 import "testing"
 

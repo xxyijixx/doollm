@@ -9,6 +9,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 // SendRequest 发送 HTTP 请求并返回响应
@@ -42,11 +44,22 @@ func ParseResponse(resp *http.Response, result interface{}) error {
 }
 
 // CreateMultipartBody 创建 multipart/form-data 请求体
-func CreateMultipartBody(filePath string) (*bytes.Buffer, string, error) {
+func CreateMultipartBody(filePath string, extension string) (*bytes.Buffer, string, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	part, err := writer.CreateFormFile("file", filePath)
+	// 获取文件的原始路径名
+	fileName := filepath.Base(filePath)
+
+	// 如果文件名没有后缀，给上传时的文件名加上 .txt 后缀
+	if !strings.Contains(fileName, ".") {
+		if extension != "" && !strings.HasPrefix(extension, ".") {
+			extension = "." + extension
+		}
+		fileName += extension
+	}
+
+	part, err := writer.CreateFormFile("file", fileName)
 	if err != nil {
 		return nil, "", fmt.Errorf("error creating form file: %w", err)
 	}

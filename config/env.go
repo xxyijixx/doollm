@@ -30,7 +30,7 @@ var defaultConfig = envConfigSchema{
 	ENV: "dev",
 
 	MYSQL_HOST:     "127.0.0.1",
-	MYSQL_PORT:     "50064",
+	MYSQL_PORT:     "49935",
 	MYSQL_USERNAME: "dootask",
 	MYSQL_PASSWORD: "123456",
 	MYSQL_DB_NAME:  "dootask",
@@ -41,8 +41,10 @@ var defaultConfig = envConfigSchema{
 	// MYSQL_DB_NAME:         "devlop",
 	MAX_REQUEST_BODY_SIZE: 200 * 1024 * 1024,
 
+	PUBLIC_PATH: "/Users/mac-47/Desktop/zeniein/devlop/dootask/public",
+
 	LLM_SERVER_URL: "http://localhost:3001/api",
-	LLM_TOKEN:      "xxxx-xxxxx-x-xx",
+	LLM_TOKEN:      "xxxxxxxxxxxxx",
 }
 
 type envConfigSchema struct {
@@ -55,6 +57,8 @@ type envConfigSchema struct {
 	MYSQL_DB_NAME  string
 
 	MAX_REQUEST_BODY_SIZE int
+
+	PUBLIC_PATH string
 
 	LLM_SERVER_URL string
 	LLM_TOKEN      string

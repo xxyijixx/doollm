@@ -62,9 +62,9 @@ func (c *Client) ValidToken() (*authentication.AuthResponse, error) {
 	return &data, nil
 }
 
-func (c *Client) UploadFile(filePath string) (*documents.UploadResponse, error) {
+func (c *Client) UploadFile(filePath, extension string) (*documents.UploadResponse, error) {
 	url := GetRequestUrl("/v1/document/upload")
-	body, contentType, err := utils.CreateMultipartBody(filePath)
+	body, contentType, err := utils.CreateMultipartBody(filePath, extension)
 	if err != nil {
 		return nil, err
 	}
