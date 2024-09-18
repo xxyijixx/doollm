@@ -16,14 +16,24 @@ import (
 )
 
 var (
-	Q             = new(Query)
-	File          *file
-	FileContent   *fileContent
-	FileUser      *fileUser
-	LlmDocument   *llmDocument
-	Report        *report
-	ReportReceive *reportReceive
-	User          *user
+	Q                         = new(Query)
+	File                      *file
+	FileContent               *fileContent
+	FileUser                  *fileUser
+	LlmDocument               *llmDocument
+	Project                   *project
+	ProjectColumn             *projectColumn
+	ProjectFlow               *projectFlow
+	ProjectFlowItem           *projectFlowItem
+	ProjectTask               *projectTask
+	ProjectTaskContent        *projectTaskContent
+	ProjectTaskFile           *projectTaskFile
+	ProjectTaskUser           *projectTaskUser
+	ProjectTaskVisibilityUser *projectTaskVisibilityUser
+	ProjectUser               *projectUser
+	Report                    *report
+	ReportReceive             *reportReceive
+	User                      *user
 )
 
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
@@ -32,6 +42,16 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	FileContent = &Q.FileContent
 	FileUser = &Q.FileUser
 	LlmDocument = &Q.LlmDocument
+	Project = &Q.Project
+	ProjectColumn = &Q.ProjectColumn
+	ProjectFlow = &Q.ProjectFlow
+	ProjectFlowItem = &Q.ProjectFlowItem
+	ProjectTask = &Q.ProjectTask
+	ProjectTaskContent = &Q.ProjectTaskContent
+	ProjectTaskFile = &Q.ProjectTaskFile
+	ProjectTaskUser = &Q.ProjectTaskUser
+	ProjectTaskVisibilityUser = &Q.ProjectTaskVisibilityUser
+	ProjectUser = &Q.ProjectUser
 	Report = &Q.Report
 	ReportReceive = &Q.ReportReceive
 	User = &Q.User
@@ -39,41 +59,71 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
-		db:            db,
-		File:          newFile(db, opts...),
-		FileContent:   newFileContent(db, opts...),
-		FileUser:      newFileUser(db, opts...),
-		LlmDocument:   newLlmDocument(db, opts...),
-		Report:        newReport(db, opts...),
-		ReportReceive: newReportReceive(db, opts...),
-		User:          newUser(db, opts...),
+		db:                        db,
+		File:                      newFile(db, opts...),
+		FileContent:               newFileContent(db, opts...),
+		FileUser:                  newFileUser(db, opts...),
+		LlmDocument:               newLlmDocument(db, opts...),
+		Project:                   newProject(db, opts...),
+		ProjectColumn:             newProjectColumn(db, opts...),
+		ProjectFlow:               newProjectFlow(db, opts...),
+		ProjectFlowItem:           newProjectFlowItem(db, opts...),
+		ProjectTask:               newProjectTask(db, opts...),
+		ProjectTaskContent:        newProjectTaskContent(db, opts...),
+		ProjectTaskFile:           newProjectTaskFile(db, opts...),
+		ProjectTaskUser:           newProjectTaskUser(db, opts...),
+		ProjectTaskVisibilityUser: newProjectTaskVisibilityUser(db, opts...),
+		ProjectUser:               newProjectUser(db, opts...),
+		Report:                    newReport(db, opts...),
+		ReportReceive:             newReportReceive(db, opts...),
+		User:                      newUser(db, opts...),
 	}
 }
 
 type Query struct {
 	db *gorm.DB
 
-	File          file
-	FileContent   fileContent
-	FileUser      fileUser
-	LlmDocument   llmDocument
-	Report        report
-	ReportReceive reportReceive
-	User          user
+	File                      file
+	FileContent               fileContent
+	FileUser                  fileUser
+	LlmDocument               llmDocument
+	Project                   project
+	ProjectColumn             projectColumn
+	ProjectFlow               projectFlow
+	ProjectFlowItem           projectFlowItem
+	ProjectTask               projectTask
+	ProjectTaskContent        projectTaskContent
+	ProjectTaskFile           projectTaskFile
+	ProjectTaskUser           projectTaskUser
+	ProjectTaskVisibilityUser projectTaskVisibilityUser
+	ProjectUser               projectUser
+	Report                    report
+	ReportReceive             reportReceive
+	User                      user
 }
 
 func (q *Query) Available() bool { return q.db != nil }
 
 func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
-		db:            db,
-		File:          q.File.clone(db),
-		FileContent:   q.FileContent.clone(db),
-		FileUser:      q.FileUser.clone(db),
-		LlmDocument:   q.LlmDocument.clone(db),
-		Report:        q.Report.clone(db),
-		ReportReceive: q.ReportReceive.clone(db),
-		User:          q.User.clone(db),
+		db:                        db,
+		File:                      q.File.clone(db),
+		FileContent:               q.FileContent.clone(db),
+		FileUser:                  q.FileUser.clone(db),
+		LlmDocument:               q.LlmDocument.clone(db),
+		Project:                   q.Project.clone(db),
+		ProjectColumn:             q.ProjectColumn.clone(db),
+		ProjectFlow:               q.ProjectFlow.clone(db),
+		ProjectFlowItem:           q.ProjectFlowItem.clone(db),
+		ProjectTask:               q.ProjectTask.clone(db),
+		ProjectTaskContent:        q.ProjectTaskContent.clone(db),
+		ProjectTaskFile:           q.ProjectTaskFile.clone(db),
+		ProjectTaskUser:           q.ProjectTaskUser.clone(db),
+		ProjectTaskVisibilityUser: q.ProjectTaskVisibilityUser.clone(db),
+		ProjectUser:               q.ProjectUser.clone(db),
+		Report:                    q.Report.clone(db),
+		ReportReceive:             q.ReportReceive.clone(db),
+		User:                      q.User.clone(db),
 	}
 }
 
@@ -87,36 +137,66 @@ func (q *Query) WriteDB() *Query {
 
 func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
-		db:            db,
-		File:          q.File.replaceDB(db),
-		FileContent:   q.FileContent.replaceDB(db),
-		FileUser:      q.FileUser.replaceDB(db),
-		LlmDocument:   q.LlmDocument.replaceDB(db),
-		Report:        q.Report.replaceDB(db),
-		ReportReceive: q.ReportReceive.replaceDB(db),
-		User:          q.User.replaceDB(db),
+		db:                        db,
+		File:                      q.File.replaceDB(db),
+		FileContent:               q.FileContent.replaceDB(db),
+		FileUser:                  q.FileUser.replaceDB(db),
+		LlmDocument:               q.LlmDocument.replaceDB(db),
+		Project:                   q.Project.replaceDB(db),
+		ProjectColumn:             q.ProjectColumn.replaceDB(db),
+		ProjectFlow:               q.ProjectFlow.replaceDB(db),
+		ProjectFlowItem:           q.ProjectFlowItem.replaceDB(db),
+		ProjectTask:               q.ProjectTask.replaceDB(db),
+		ProjectTaskContent:        q.ProjectTaskContent.replaceDB(db),
+		ProjectTaskFile:           q.ProjectTaskFile.replaceDB(db),
+		ProjectTaskUser:           q.ProjectTaskUser.replaceDB(db),
+		ProjectTaskVisibilityUser: q.ProjectTaskVisibilityUser.replaceDB(db),
+		ProjectUser:               q.ProjectUser.replaceDB(db),
+		Report:                    q.Report.replaceDB(db),
+		ReportReceive:             q.ReportReceive.replaceDB(db),
+		User:                      q.User.replaceDB(db),
 	}
 }
 
 type queryCtx struct {
-	File          IFileDo
-	FileContent   IFileContentDo
-	FileUser      IFileUserDo
-	LlmDocument   ILlmDocumentDo
-	Report        IReportDo
-	ReportReceive IReportReceiveDo
-	User          IUserDo
+	File                      IFileDo
+	FileContent               IFileContentDo
+	FileUser                  IFileUserDo
+	LlmDocument               ILlmDocumentDo
+	Project                   IProjectDo
+	ProjectColumn             IProjectColumnDo
+	ProjectFlow               IProjectFlowDo
+	ProjectFlowItem           IProjectFlowItemDo
+	ProjectTask               IProjectTaskDo
+	ProjectTaskContent        IProjectTaskContentDo
+	ProjectTaskFile           IProjectTaskFileDo
+	ProjectTaskUser           IProjectTaskUserDo
+	ProjectTaskVisibilityUser IProjectTaskVisibilityUserDo
+	ProjectUser               IProjectUserDo
+	Report                    IReportDo
+	ReportReceive             IReportReceiveDo
+	User                      IUserDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
-		File:          q.File.WithContext(ctx),
-		FileContent:   q.FileContent.WithContext(ctx),
-		FileUser:      q.FileUser.WithContext(ctx),
-		LlmDocument:   q.LlmDocument.WithContext(ctx),
-		Report:        q.Report.WithContext(ctx),
-		ReportReceive: q.ReportReceive.WithContext(ctx),
-		User:          q.User.WithContext(ctx),
+		File:                      q.File.WithContext(ctx),
+		FileContent:               q.FileContent.WithContext(ctx),
+		FileUser:                  q.FileUser.WithContext(ctx),
+		LlmDocument:               q.LlmDocument.WithContext(ctx),
+		Project:                   q.Project.WithContext(ctx),
+		ProjectColumn:             q.ProjectColumn.WithContext(ctx),
+		ProjectFlow:               q.ProjectFlow.WithContext(ctx),
+		ProjectFlowItem:           q.ProjectFlowItem.WithContext(ctx),
+		ProjectTask:               q.ProjectTask.WithContext(ctx),
+		ProjectTaskContent:        q.ProjectTaskContent.WithContext(ctx),
+		ProjectTaskFile:           q.ProjectTaskFile.WithContext(ctx),
+		ProjectTaskUser:           q.ProjectTaskUser.WithContext(ctx),
+		ProjectTaskVisibilityUser: q.ProjectTaskVisibilityUser.WithContext(ctx),
+		ProjectUser:               q.ProjectUser.WithContext(ctx),
+		Report:                    q.Report.WithContext(ctx),
+		ReportReceive:             q.ReportReceive.WithContext(ctx),
+		User:                      q.User.WithContext(ctx),
 	}
 }
 
