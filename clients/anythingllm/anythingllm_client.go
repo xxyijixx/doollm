@@ -81,6 +81,25 @@ func (c *Client) UploadFile(filePath, extension string) (*documents.UploadRespon
 	return &data, nil
 }
 
+func (c *Client) UploadFileFormString(content, fileName, extension string) (*documents.UploadResponse, error) {
+	url := GetRequestUrl("/v1/document/upload")
+	body, contentType, err := utils.CreateMultipartBodyFromString(content, fileName, extension)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := utils.SendRequest(c.httpClient, "POST", url, body, contentType)
+	if err != nil {
+		return nil, err
+	}
+
+	var data documents.UploadResponse
+	if err := utils.ParseResponse(resp, &data); err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
 func (c *Client) UploadRowText(params documents.RawTextParams) (*documents.UploadResponse, error) {
 	url := GetRequestUrl("/v1/document/raw-text")
 	jsonData, err := json.Marshal(params)

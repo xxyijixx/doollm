@@ -76,3 +76,36 @@ func CreateMultipartBody(filePath string, extension string) (*bytes.Buffer, stri
 	}
 	return body, writer.FormDataContentType(), nil
 }
+
+// CreateMultipartBodyFromString 创建 multipart/form-data 请求体，将字符串作为文件上传
+func CreateMultipartBodyFromString(content string, fileName string, extension string) (*bytes.Buffer, string, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// 如果文件名没有后缀，给上传时的文件名加上指定的后缀
+	if !strings.Contains(fileName, ".") {
+		if extension != "" && !strings.HasPrefix(extension, ".") {
+			extension = "." + extension
+		}
+		fileName += extension
+	}
+
+	// 创建 multipart 中的文件部分
+	part, err := writer.CreateFormFile("file", fileName)
+	if err != nil {
+		return nil, "", fmt.Errorf("error creating form file: %w", err)
+	}
+
+	// 将字符串内容写入文件部分
+	if _, err := io.Copy(part, strings.NewReader(content)); err != nil {
+		return nil, "", fmt.Errorf("error copying content: %w", err)
+	}
+
+	// 关闭 writer 以完成 multipart 的构建
+	if err := writer.Close(); err != nil {
+		return nil, "", fmt.Errorf("error closing writer: %w", err)
+	}
+
+	// 返回 multipart body 和 Content-Type 以便后续发送请求
+	return body, writer.FormDataContentType(), nil
+}
