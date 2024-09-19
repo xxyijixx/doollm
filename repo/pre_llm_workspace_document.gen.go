@@ -29,6 +29,7 @@ func newLlmWorkspaceDocument(db *gorm.DB, opts ...gen.DOOption) llmWorkspaceDocu
 	_llmWorkspaceDocument.ALL = field.NewAsterisk(tableName)
 	_llmWorkspaceDocument.ID = field.NewInt64(tableName, "id")
 	_llmWorkspaceDocument.WorkspaceID = field.NewInt64(tableName, "workspace_id")
+	_llmWorkspaceDocument.WorkspaceSlug = field.NewString(tableName, "slug")
 	_llmWorkspaceDocument.DocumentID = field.NewInt64(tableName, "document_id")
 	_llmWorkspaceDocument.CreatedAt = field.NewTime(tableName, "created_at")
 
@@ -40,11 +41,12 @@ func newLlmWorkspaceDocument(db *gorm.DB, opts ...gen.DOOption) llmWorkspaceDocu
 type llmWorkspaceDocument struct {
 	llmWorkspaceDocumentDo llmWorkspaceDocumentDo
 
-	ALL         field.Asterisk
-	ID          field.Int64
-	WorkspaceID field.Int64
-	DocumentID  field.Int64
-	CreatedAt   field.Time
+	ALL           field.Asterisk
+	ID            field.Int64
+	WorkspaceID   field.Int64
+	WorkspaceSlug field.String
+	DocumentID    field.Int64
+	CreatedAt     field.Time
 
 	fieldMap map[string]field.Expr
 }
@@ -63,6 +65,7 @@ func (l *llmWorkspaceDocument) updateTableName(table string) *llmWorkspaceDocume
 	l.ALL = field.NewAsterisk(table)
 	l.ID = field.NewInt64(table, "id")
 	l.WorkspaceID = field.NewInt64(table, "workspace_id")
+	l.WorkspaceSlug = field.NewString(table, "slug")
 	l.DocumentID = field.NewInt64(table, "document_id")
 	l.CreatedAt = field.NewTime(table, "created_at")
 
@@ -93,9 +96,10 @@ func (l *llmWorkspaceDocument) GetFieldByName(fieldName string) (field.OrderExpr
 }
 
 func (l *llmWorkspaceDocument) fillFieldMap() {
-	l.fieldMap = make(map[string]field.Expr, 4)
+	l.fieldMap = make(map[string]field.Expr, 5)
 	l.fieldMap["id"] = l.ID
 	l.fieldMap["workspace_id"] = l.WorkspaceID
+	l.fieldMap["slug"] = l.WorkspaceSlug
 	l.fieldMap["document_id"] = l.DocumentID
 	l.fieldMap["created_at"] = l.CreatedAt
 }

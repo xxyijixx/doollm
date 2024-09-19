@@ -4,10 +4,11 @@ import (
 	"context"
 	"doollm/clients/anythingllm"
 	"doollm/clients/anythingllm/documents"
-	"doollm/clients/anythingllm/system"
 	"doollm/repo"
 	"doollm/repo/model"
+	"doollm/service/document"
 	linktype "doollm/service/document/type"
+	"doollm/service/workspace"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -33,6 +34,9 @@ type ReportJsonData struct {
 }
 
 var anythingllmClient = anythingllm.NewClient()
+
+var documentService = &document.DocumentServiceImpl{}
+var workspaceService = &workspace.WorkspaceServiceImpl{}
 
 // Traversal 对用户的工作报告进行处理，暂时不分批处理
 func (r *ReportServiceImpl) Traversal() {
@@ -85,7 +89,7 @@ func (r *ReportServiceImpl) Update() {
 
 func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report *model.Report, document *model.LlmDocument, userMap map[int64]*model.User) error {
 	// 更新文档
-	if document.LastModifiedAt.Equal(report.UpdatedAt) {
+	if document != nil && document.LastModifiedAt.Equal(report.UpdatedAt) {
 		log.Debugf("Report[#%d]内容没有更新", report.ID)
 		return nil
 	}
@@ -139,7 +143,14 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 			LastModifiedAt:     report.UpdatedAt,
 			CreatedAt:          time.Now(),
 		}
-		return repo.LlmDocument.WithContext(ctx).Create(newDocument)
+		err = repo.LlmDocument.WithContext(ctx).Create(newDocument)
+		if err != nil {
+			return err
+		}
+		// anythingllmClient.UpdateEmbeddings()
+		err = workspaceService.Upload(user.Userid, newDocument.ID)
+		log.Info("同步工作区失败", err)
+		return err
 	}
 
 	log.Debugf("Report[#%d]内容存在更新", report.ID)
@@ -155,10 +166,9 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 	if err != nil || result.RowsAffected == 0 {
 		return err
 	}
-	// 移除旧文档
-	return anythingllmClient.RemoveDocument(system.RemoveDocumentParams{
-		Names: []string{document.Location},
-	})
+	// 移除旧文档并更新工作区
+	return documentService.RemoveAndUpdateWorkspace(document.ID, doc.Location, document.Location)
+
 }
 
 // handleReceive 处理汇报对象，暂时汇报对象不进行上传
