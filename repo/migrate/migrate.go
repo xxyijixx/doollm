@@ -22,7 +22,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("db connection failed: %v", err))
 	}
-	err = db.AutoMigrate(&model.LlmDocument{})
+	err = db.AutoMigrate(&model.LlmDocument{}, &model.LlmWorkspace{}, &model.LlmWorkspaceDocument{})
 	if err != nil {
 		panic(fmt.Errorf("db migrate failed: %v", err))
 	}

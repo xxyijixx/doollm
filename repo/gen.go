@@ -21,6 +21,8 @@ var (
 	FileContent               *fileContent
 	FileUser                  *fileUser
 	LlmDocument               *llmDocument
+	LlmWorkspace              *llmWorkspace
+	LlmWorkspaceDocument      *llmWorkspaceDocument
 	Project                   *project
 	ProjectColumn             *projectColumn
 	ProjectFlow               *projectFlow
@@ -42,6 +44,8 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	FileContent = &Q.FileContent
 	FileUser = &Q.FileUser
 	LlmDocument = &Q.LlmDocument
+	LlmWorkspace = &Q.LlmWorkspace
+	LlmWorkspaceDocument = &Q.LlmWorkspaceDocument
 	Project = &Q.Project
 	ProjectColumn = &Q.ProjectColumn
 	ProjectFlow = &Q.ProjectFlow
@@ -64,6 +68,8 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		FileContent:               newFileContent(db, opts...),
 		FileUser:                  newFileUser(db, opts...),
 		LlmDocument:               newLlmDocument(db, opts...),
+		LlmWorkspace:              newLlmWorkspace(db, opts...),
+		LlmWorkspaceDocument:      newLlmWorkspaceDocument(db, opts...),
 		Project:                   newProject(db, opts...),
 		ProjectColumn:             newProjectColumn(db, opts...),
 		ProjectFlow:               newProjectFlow(db, opts...),
@@ -87,6 +93,8 @@ type Query struct {
 	FileContent               fileContent
 	FileUser                  fileUser
 	LlmDocument               llmDocument
+	LlmWorkspace              llmWorkspace
+	LlmWorkspaceDocument      llmWorkspaceDocument
 	Project                   project
 	ProjectColumn             projectColumn
 	ProjectFlow               projectFlow
@@ -111,6 +119,8 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		FileContent:               q.FileContent.clone(db),
 		FileUser:                  q.FileUser.clone(db),
 		LlmDocument:               q.LlmDocument.clone(db),
+		LlmWorkspace:              q.LlmWorkspace.clone(db),
+		LlmWorkspaceDocument:      q.LlmWorkspaceDocument.clone(db),
 		Project:                   q.Project.clone(db),
 		ProjectColumn:             q.ProjectColumn.clone(db),
 		ProjectFlow:               q.ProjectFlow.clone(db),
@@ -142,6 +152,8 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		FileContent:               q.FileContent.replaceDB(db),
 		FileUser:                  q.FileUser.replaceDB(db),
 		LlmDocument:               q.LlmDocument.replaceDB(db),
+		LlmWorkspace:              q.LlmWorkspace.replaceDB(db),
+		LlmWorkspaceDocument:      q.LlmWorkspaceDocument.replaceDB(db),
 		Project:                   q.Project.replaceDB(db),
 		ProjectColumn:             q.ProjectColumn.replaceDB(db),
 		ProjectFlow:               q.ProjectFlow.replaceDB(db),
@@ -163,6 +175,8 @@ type queryCtx struct {
 	FileContent               IFileContentDo
 	FileUser                  IFileUserDo
 	LlmDocument               ILlmDocumentDo
+	LlmWorkspace              ILlmWorkspaceDo
+	LlmWorkspaceDocument      ILlmWorkspaceDocumentDo
 	Project                   IProjectDo
 	ProjectColumn             IProjectColumnDo
 	ProjectFlow               IProjectFlowDo
@@ -184,6 +198,8 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		FileContent:               q.FileContent.WithContext(ctx),
 		FileUser:                  q.FileUser.WithContext(ctx),
 		LlmDocument:               q.LlmDocument.WithContext(ctx),
+		LlmWorkspace:              q.LlmWorkspace.WithContext(ctx),
+		LlmWorkspaceDocument:      q.LlmWorkspaceDocument.WithContext(ctx),
 		Project:                   q.Project.WithContext(ctx),
 		ProjectColumn:             q.ProjectColumn.WithContext(ctx),
 		ProjectFlow:               q.ProjectFlow.WithContext(ctx),
