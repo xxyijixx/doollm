@@ -48,8 +48,7 @@ func NewClient() *Client {
 
 func (c *Client) ValidToken() (*authentication.AuthResponse, error) {
 	url := GetRequestUrl("/v1/auth")
-	utils.SendRequest(c.httpClient, "GET", url, nil, "")
-	resp, err := c.httpClient.Get(url)
+	resp, err := utils.SendRequest(c.httpClient, "GET", url, nil, "")
 	if err != nil {
 		return nil, err
 	}
