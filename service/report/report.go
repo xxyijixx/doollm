@@ -110,6 +110,7 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 	user, exists := userMap[report.Userid]
 	if !exists {
 		log.Warn("查询不到用户信息")
+		return nil
 	}
 	receiveUserNames := handleReceive(ctx, *report, userMap)
 	reportJson := ReportJsonData{
