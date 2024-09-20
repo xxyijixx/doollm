@@ -6,10 +6,10 @@ import (
 	wk "doollm/clients/anythingllm/workspace"
 	"doollm/repo"
 	"doollm/repo/model"
-	"encoding/json"
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -67,9 +67,19 @@ func (w *WorkspaceServiceImpl) Upload(userid int64, documentId int64) error {
 	if err != nil {
 		return err
 	}
-	jsonData, _ := json.MarshalIndent(resp, "", "  ")
-	// log.Debugf("更新工作区响应 UpdateEmbeddings Response: %v", string(jsonData))
-	fmt.Printf("更新工作区响应:\n %v", string(jsonData))
+	// jsonData, _ := json.MarshalIndent(resp, "", "  ")
+	// fmt.Printf("更新工作区响应:\n %v", string(jsonData))
+	flag := false
+	for _, workspaceDocument := range resp.Workspace.Documents {
+		if workspaceDocument.Docpath == document.Location {
+			flag = true
+			break
+		}
+	}
+	if !flag {
+		log.Debugf("文档[#%d]移动到工作区失败:", document.ID)
+		return fmt.Errorf("failed to move document to the workspace")
+	}
 	err = repo.LlmWorkspaceDocument.WithContext(ctx).Create(
 		&model.LlmWorkspaceDocument{
 			WorkspaceID:   workspace.ID,

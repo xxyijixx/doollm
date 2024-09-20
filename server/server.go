@@ -11,7 +11,7 @@ func Run() {
 	r := gin.Default()
 	documentService := &document.DocumentServiceImpl{}
 	_ = documentService
-	// documentService.RemoveAll()
+	documentService.RemoveAll()
 
 	workspaceService := &workspace.WorkspaceServiceImpl{}
 	_ = workspaceService

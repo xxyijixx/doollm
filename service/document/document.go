@@ -6,6 +6,7 @@ import (
 	"doollm/clients/anythingllm/system"
 	"doollm/clients/anythingllm/workspace"
 	"doollm/repo"
+	linktype "doollm/service/document/type"
 
 	"gorm.io/gorm"
 )
@@ -49,7 +50,8 @@ func (d *DocumentServiceImpl) RemoveAndUpdateWorkspace(documentId int64, newLoca
 
 // RemoveAndUpdateWorkspace
 func (d *DocumentServiceImpl) RemoveAll() error {
-	documents, err := repo.LlmDocument.WithContext(context.Background()).Find()
+	ctx := context.Background()
+	documents, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.FILE)).Find()
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil
@@ -57,13 +59,16 @@ func (d *DocumentServiceImpl) RemoveAll() error {
 		return err
 	}
 	locations := make([]string, len(documents))
+	ids := make([]int64, len(documents))
 	for i, document := range documents {
 		locations[i] = document.Location
+		ids[i] = document.ID
 	}
 	anythingllmClient.RemoveDocument(system.RemoveDocumentParams{
 		Names: locations,
 	})
 
-	repo.LlmDocument.WithContext(context.Background()).Where(repo.LlmDocument.LinkParantId.Eq(0)).Delete()
+	repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.ID.In(ids...)).Delete()
+	repo.LlmWorkspaceDocument.WithContext(ctx).Where(repo.LlmWorkspaceDocument.DocumentID.In(ids...)).Delete()
 	return nil
 }

@@ -96,6 +96,11 @@ func (r *ReportServiceImpl) UploadWorkspace() {
 	}
 }
 
+// Update 维护状态
+// TODO
+// 1. 查询拥有工作区权限的用户
+// 2. 查询这些用户拥有的全部报告ID
+// 3. 将这些ID与已经上传的文档ID进行比较，如报告被删除，删除上传文档并更新工作区文档
 func (r *ReportServiceImpl) Update() {
 	panic("not implemented") // TODO: Implement
 }
@@ -178,7 +183,7 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 
 }
 
-// handleReceive 处理汇报对象，暂时汇报对象不进行上传
+// handleReceive 处理汇报对象
 func handleReceive(ctx context.Context, report model.Report, userMap map[int64]*model.User) string {
 	reportReceive, err := repo.ReportReceive.WithContext(ctx).Where(repo.ReportReceive.Rid.Eq(report.ID)).Find()
 	if err != nil {

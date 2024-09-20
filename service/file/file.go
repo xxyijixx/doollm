@@ -9,6 +9,8 @@ import (
 	"doollm/service/document"
 	linktype "doollm/service/document/type"
 	"doollm/service/workspace"
+	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -22,6 +24,7 @@ import (
 const (
 	MaxPPTSize   = 1024 * 1024 * 100 // 100MB
 	MaxPDFSize   = 1024 * 1024 * 50  // 50MB
+	MaxTxtLen    = 100000
 	FileTypePDF  = "pdf"
 	FileTypeDoc  = "document"
 	FileTypeTxt  = "txt"
@@ -123,11 +126,37 @@ func verifyFile(file *model.File, fileContent *model.FileContent) bool {
 		return fileContent.Size <= MaxPPTSize
 	case FileTypePDF:
 		return fileContent.Size <= MaxPDFSize
-	case FileTypeTxt, FileTypeDoc:
+	case FileTypeTxt:
+		return VerifyTxtFile(fileContent)
+	case FileTypeDoc:
 		return true
 	default:
 		return true
 	}
+}
+
+func VerifyTxtFile(fileContent *model.FileContent) bool {
+	var content Content
+	err := json.Unmarshal([]byte(fileContent.Content), &content)
+	if err != nil {
+		log.Debugf("Error unmarshal json %v", err)
+		return false
+	}
+	data, err := os.ReadFile(config.PublicPath(content.URL)) // 替换为你的文件路径
+	if err != nil {
+		log.Printf("无法读取文件: %v", err)
+		return false
+	}
+
+	// 计算字符长度
+	charCount := len(data)
+
+	// 判断是否超过10万字符
+	if charCount > MaxTxtLen {
+		fmt.Printf("文件包含 %d 个字符，超过10万字符。\n", charCount)
+		return false
+	}
+	return true
 }
 
 func (f *FileServiceImpl) updateOrInsertDocument(ctx context.Context, file *model.File, content Content, document *model.LlmDocument) error {
