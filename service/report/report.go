@@ -20,6 +20,7 @@ import (
 
 type ReportService interface {
 	Traversal()
+	UploadWorkspace()
 	Update()
 }
 
@@ -83,6 +84,18 @@ func (r *ReportServiceImpl) Traversal() {
 	}
 }
 
+func (r *ReportServiceImpl) UploadWorkspace() {
+	ctx := context.Background()
+	documents, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.REPORT)).Find()
+	if err != nil {
+		log.Debugf("Error query documents %v", err)
+		return
+	}
+	for _, document := range documents {
+		workspaceService.Upload(document.Userid, document.ID)
+	}
+}
+
 func (r *ReportServiceImpl) Update() {
 	panic("not implemented") // TODO: Implement
 }
@@ -143,13 +156,7 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 			LastModifiedAt:     report.UpdatedAt,
 			CreatedAt:          time.Now(),
 		}
-		err = repo.LlmDocument.WithContext(ctx).Create(newDocument)
-		if err != nil {
-			return err
-		}
-		// anythingllmClient.UpdateEmbeddings()
-		err = workspaceService.Upload(user.Userid, newDocument.ID)
-		return err
+		return repo.LlmDocument.WithContext(ctx).Create(newDocument)
 	}
 
 	log.Debugf("Report[#%d]内容存在更新", report.ID)

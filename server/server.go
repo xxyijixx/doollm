@@ -13,19 +13,23 @@ import (
 func Run() {
 	r := gin.Default()
 	documentService := &document.DocumentServiceImpl{}
-	documentService.RemoveAll()
 	_ = documentService
+	documentService.RemoveAll()
+
 	workspaceService := &workspace.WorkspaceServiceImpl{}
 	_ = workspaceService
 	// workspaceService.Create(1)
 	// workspaceService.Create(6)
 	fileService := &file.FileServiceImpl{}
 	_ = fileService
+	// fileService.Traversal()
+	// fileService.UploadWorkspace()
+
 	reportService := &report.ReportServiceImpl{}
 	_ = reportService
 	reportService.Traversal()
-	// fileService.Traversal()
-	// fileService.UploadWorkspace()
+	reportService.UploadWorkspace()
+
 	taskService := &task.TaskServiceImpl{}
 	_ = taskService
 	// taskService.Traversal()

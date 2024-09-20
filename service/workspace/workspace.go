@@ -17,6 +17,8 @@ var anythingllmClient = anythingllm.NewClient()
 
 type WorkspaceService interface {
 	Verify(userid int64) bool
+	Upload(userid int64, documentId int64) error
+	Create(userid int64)
 }
 
 type WorkspaceServiceImpl struct {
@@ -47,6 +49,18 @@ func (w *WorkspaceServiceImpl) Upload(userid int64, documentId int64) error {
 	if err != nil {
 		return err
 	}
+
+	workspaceDocument, err := repo.LlmWorkspaceDocument.WithContext(ctx).
+		Where(repo.LlmWorkspaceDocument.WorkspaceID.Eq(workspace.ID), repo.LlmWorkspaceDocument.DocumentID.Eq(documentId)).
+		First()
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return err
+	}
+	if workspaceDocument != nil {
+		// log.Debug("The document already exists in the workspace")
+		return fmt.Errorf("the document already exists in the workspace")
+	}
+
 	resp, err := anythingllmClient.UpdateEmbeddings(workspace.Slug, wk.UpdateEmbeddingsParams{
 		Adds: []string{document.Location},
 	})
