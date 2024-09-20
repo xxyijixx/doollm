@@ -6,6 +6,7 @@ import (
 	wk "doollm/clients/anythingllm/workspace"
 	"doollm/repo"
 	"doollm/repo/model"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -46,13 +47,15 @@ func (w *WorkspaceServiceImpl) Upload(userid int64, documentId int64) error {
 	if err != nil {
 		return err
 	}
-	_, err = anythingllmClient.UpdateEmbeddings(workspace.Slug, wk.UpdateEmbeddingsParams{
+	resp, err := anythingllmClient.UpdateEmbeddings(workspace.Slug, wk.UpdateEmbeddingsParams{
 		Adds: []string{document.Location},
 	})
 	if err != nil {
 		return err
 	}
-
+	jsonData, _ := json.MarshalIndent(resp, "", "  ")
+	// log.Debugf("更新工作区响应 UpdateEmbeddings Response: %v", string(jsonData))
+	fmt.Printf("更新工作区响应:\n %v", string(jsonData))
 	err = repo.LlmWorkspaceDocument.WithContext(ctx).Create(
 		&model.LlmWorkspaceDocument{
 			WorkspaceID:   workspace.ID,

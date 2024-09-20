@@ -32,3 +32,7 @@ type SubTaskRowText struct {
 	EndAt      time.Time `json:"end_at"`
 	CompleteAt time.Time `json:"complete_at,omitempty"`
 }
+
+type TaskDocumentExtras struct {
+	Owner []int64 `json:"owner"`
+}

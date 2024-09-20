@@ -17,14 +17,15 @@ func Run() {
 	_ = documentService
 	workspaceService := &workspace.WorkspaceServiceImpl{}
 	_ = workspaceService
-	workspaceService.Create(1)
-	workspaceService.Create(6)
+	// workspaceService.Create(1)
+	// workspaceService.Create(6)
 	fileService := &file.FileServiceImpl{}
 	_ = fileService
 	reportService := &report.ReportServiceImpl{}
 	_ = reportService
 	reportService.Traversal()
 	// fileService.Traversal()
+	// fileService.UploadWorkspace()
 	taskService := &task.TaskServiceImpl{}
 	_ = taskService
 	// taskService.Traversal()

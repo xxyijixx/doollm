@@ -7,6 +7,8 @@ import (
 	"doollm/repo"
 	"doollm/repo/model"
 	linktype "doollm/service/document/type"
+	"doollm/service/workspace"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -18,6 +20,7 @@ import (
 
 type TaskService interface {
 	Traversal()
+	UploadWorkspace()
 	Update()
 }
 
@@ -25,12 +28,14 @@ type TaskServiceImpl struct {
 }
 
 var anythingllmClient = anythingllm.NewClient()
+var workspaceService = &workspace.WorkspaceServiceImpl{}
 
 type ProjectTaskHandle struct {
 	ctx              context.Context
 	project          *model.Project
 	task             *model.ProjectTask
 	rowTask          *TaskRowText
+	extras           *TaskDocumentExtras
 	userMap          *map[int64]*model.User
 	projectColumnMap *map[int64]*model.ProjectColumn
 	attachment       []*model.ProjectTaskFile
@@ -55,6 +60,24 @@ func (t *TaskServiceImpl) Traversal() {
 		handleProject(ctx, project, &userMap)
 	}
 
+}
+
+func (t *TaskServiceImpl) UploadWorkspace() {
+	ctx := context.Background()
+	documents, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.TASK)).Find()
+	if err != nil {
+		return
+	}
+	for _, document := range documents {
+		extras := TaskDocumentExtras{}
+		if err := json.Unmarshal([]byte(document.LinkExtras), &extras); err != nil {
+			continue
+		}
+		for _, owner := range extras.Owner {
+			workspaceService.Upload(owner, document.ID)
+		}
+
+	}
 }
 
 func (t *TaskServiceImpl) Update() {
@@ -144,7 +167,7 @@ func (h *ProjectTaskHandle) handleTask() {
 
 		h.rowTask.Status = strings.ReplaceAll(h.task.FlowItemName, "|", "\\|")
 	}
-	FindProjectUser(h.project.ID, h.rowTask, h.userMap)
+	h.FindProjectUser()
 	subTasks, err := repo.ProjectTask.WithContext(h.ctx).Where(repo.ProjectTask.ParentID.Eq(h.task.ID)).Find()
 	if err != nil {
 		log.Printf("Error query sub task: %v", err)
@@ -215,6 +238,8 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 		return nil
 	}
 	doc := res.Documents[0]
+	extras, _ := json.Marshal(h.extras)
+
 	if document == nil {
 		// 插入新文档
 		log.Debugf("Task[#%d]内容没有上传", h.task.ID)
@@ -222,6 +247,7 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 			LinkType:           linktype.TASK,
 			LinkId:             h.task.ID,
 			LinkParantId:       0,
+			LinkExtras:         string(extras),
 			DocID:              doc.ID,
 			Location:           doc.Location,
 			Title:              doc.Title,
@@ -253,7 +279,8 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 
 }
 
-func FindProjectUser(projectId int64, rowText *TaskRowText, userMap *map[int64]*model.User) {
+func (h *ProjectTaskHandle) FindProjectUser() {
+	projectId := h.project.ID
 	projectUsers, err := repo.ProjectUser.WithContext(context.Background()).Where(repo.ProjectUser.ProjectID.Eq(projectId)).Find()
 	if err != nil {
 		log.Printf("Error query project user: %v", err)
@@ -268,8 +295,21 @@ func FindProjectUser(projectId int64, rowText *TaskRowText, userMap *map[int64]*
 		projectUserIds = append(projectUserIds, projectUser.Userid)
 
 	}
-	rowText.ProjectOwner = GetUserNames(projectOwnerIds, userMap)
-	rowText.ProjectUser = GetUserNames(projectUserIds, userMap)
+
+	h.rowTask.ProjectOwner = GetUserNames(projectOwnerIds, h.userMap)
+	h.rowTask.ProjectUser = GetUserNames(projectUserIds, h.userMap)
+
+	taskUsers, err := repo.ProjectTaskUser.WithContext(context.Background()).Where(repo.ProjectTaskUser.TaskID.Eq(h.task.ID), repo.ProjectTaskUser.Owner.Eq(1)).Find()
+	if err != nil {
+		return
+	}
+	taskOwnerIds := make([]int64, len(taskUsers))
+	for i, taskUser := range taskUsers {
+		taskOwnerIds[i] = taskUser.Userid
+	}
+	h.extras = &TaskDocumentExtras{
+		Owner: taskOwnerIds,
+	}
 }
 
 func FindTaskUser(taskId int64, userMap *map[int64]*model.User, isOwner bool) string {

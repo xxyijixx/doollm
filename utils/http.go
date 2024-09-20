@@ -29,7 +29,7 @@ func SendRequest(httpClient *http.Client, method, url string, body io.Reader, co
 	}
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close() // 确保在非200响应时关闭响应体
-		return nil, fmt.Errorf("received non-200 response code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("received non-200 response code: %d, %v", resp.StatusCode, resp)
 	}
 	return resp, nil
 }

@@ -71,9 +71,8 @@ func (c *Client) DeleteWorkspace(slug string) error {
 }
 
 // Add or remove documents from a workspace by its unique slug.
-func (c *Client) UpdateEmbeddings(slug string, params workspace.UpdateEmbeddingsParams) (interface{}, error) {
+func (c *Client) UpdateEmbeddings(slug string, params workspace.UpdateEmbeddingsParams) (*workspace.UpdateEmbeddingsResponse, error) {
 	url := GetRequestUrl("/v1/workspace/" + slug + "/update-embeddings")
-	utils.SendRequest(c.httpClient, "POST", url, nil, "application/json")
 	jsonData, err := json.Marshal(params)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling JSON: %w", err)
@@ -84,7 +83,7 @@ func (c *Client) UpdateEmbeddings(slug string, params workspace.UpdateEmbeddings
 	}
 	defer resp.Body.Close()
 
-	var data workspace.GetResponse
+	var data workspace.UpdateEmbeddingsResponse
 	if err := utils.ParseResponse(resp, &data); err != nil {
 		return nil, err
 	}

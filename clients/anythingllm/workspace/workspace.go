@@ -59,6 +59,41 @@ type Workspace struct {
 }
 
 type UpdateEmbeddingsParams struct {
-	Adds    []string `json:"adds"`
-	Deletes []string `json:"deletes"`
+	Adds    []string `json:"adds,omitempty"`
+	Deletes []string `json:"deletes,omitempty"`
+}
+
+type UpdateEmbeddingsResponse struct {
+	Workspace struct {
+		ID                   int         `json:"id"`
+		Name                 string      `json:"name"`
+		Slug                 string      `json:"slug"`
+		VectorTag            interface{} `json:"vectorTag"`
+		CreatedAt            time.Time   `json:"createdAt"`
+		OpenAiTemp           interface{} `json:"openAiTemp"`
+		OpenAiHistory        int         `json:"openAiHistory"`
+		LastUpdatedAt        time.Time   `json:"lastUpdatedAt"`
+		OpenAiPrompt         interface{} `json:"openAiPrompt"`
+		SimilarityThreshold  float64     `json:"similarityThreshold"`
+		ChatProvider         interface{} `json:"chatProvider"`
+		ChatModel            interface{} `json:"chatModel"`
+		TopN                 int         `json:"topN"`
+		ChatMode             string      `json:"chatMode"`
+		PfpFilename          interface{} `json:"pfpFilename"`
+		AgentProvider        interface{} `json:"agentProvider"`
+		AgentModel           interface{} `json:"agentModel"`
+		QueryRefusalResponse interface{} `json:"queryRefusalResponse"`
+		Documents            []struct {
+			ID            int       `json:"id"`
+			DocID         string    `json:"docId"`
+			Filename      string    `json:"filename"`
+			Docpath       string    `json:"docpath"`
+			WorkspaceID   int       `json:"workspaceId"`
+			Metadata      string    `json:"metadata"`
+			Pinned        bool      `json:"pinned"`
+			Watched       bool      `json:"watched"`
+			CreatedAt     time.Time `json:"createdAt"`
+			LastUpdatedAt time.Time `json:"lastUpdatedAt"`
+		} `json:"documents"`
+	} `json:"workspace"`
 }

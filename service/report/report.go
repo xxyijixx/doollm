@@ -149,7 +149,6 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 		}
 		// anythingllmClient.UpdateEmbeddings()
 		err = workspaceService.Upload(user.Userid, newDocument.ID)
-		log.Info("同步工作区失败", err)
 		return err
 	}
 
