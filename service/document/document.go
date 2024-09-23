@@ -8,6 +8,7 @@ import (
 	"doollm/repo"
 	linktype "doollm/service/document/type"
 
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -26,13 +27,38 @@ func (d *DocumentServiceImpl) UploadAndRemove() {
 
 }
 
+func (d *DocumentServiceImpl) Remove(documentId int64) {
+
+	ctx := context.Background()
+
+	document, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.ID.Eq(documentId)).First()
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Debugf("未找到相关文档信息")
+		}
+		return
+	}
+
+	anythingllmClient.RemoveDocument(system.RemoveDocumentParams{
+		Names: []string{document.Location},
+	})
+
+	resultInfo, err := repo.LlmWorkspaceDocument.WithContext(ctx).Where(repo.LlmWorkspaceDocument.DocumentID.Eq(document.ID)).Delete()
+	if err != nil {
+		return
+	}
+	_ = resultInfo
+}
+
 // RemoveAndUpdateWorkspace
 func (d *DocumentServiceImpl) RemoveAndUpdateWorkspace(documentId int64, newLocation, oldLocation string) error {
 	anythingllmClient.RemoveDocument(system.RemoveDocumentParams{
 		Names: []string{oldLocation},
 	})
 
-	workspaceDocuments, err := repo.LlmWorkspaceDocument.WithContext(context.Background()).Where(repo.LlmWorkspaceDocument.DocumentID.Eq(documentId)).Find()
+	workspaceDocuments, err := repo.LlmWorkspaceDocument.WithContext(context.Background()).
+		Where(repo.LlmWorkspaceDocument.DocumentID.Eq(documentId)).
+		Find()
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil

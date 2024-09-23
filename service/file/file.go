@@ -30,12 +30,15 @@ const (
 	FileTypeTxt  = "txt"
 	FileTypeWord = "word"
 	FileTypePPT  = "ppt"
+
+	FOLDER = "folder"
 )
 
 type FileService interface {
 	Traversal()
 	UploadWorkspace()
 	Update()
+	Delete()
 }
 
 type FileServiceImpl struct{}
@@ -116,8 +119,149 @@ func (f *FileServiceImpl) UploadWorkspace() {
 
 }
 
-func (f *FileServiceImpl) Update() {
+// Delete 删除文件，移除知识库文档并更新用户工作区
+func (f *FileServiceImpl) Delete(fileId int64) {
+	ctx := context.Background()
+	document, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(fileId)).First()
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Debugf("未找到相关文档信息")
+		}
+		return
+	}
+	documentService.Remove(document.ID)
+}
 
+// Update 文件访问权限变更，更新用户工作区
+func (f *FileServiceImpl) Update(fileId int64) {
+	ctx := context.Background()
+	file, err := repo.File.WithContext(ctx).Where(repo.File.ID.Eq(fileId)).First()
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Debugf("未找到相关文件信息")
+		}
+		return
+	}
+	// 处理拥有工作区的用户
+	workspaceList, err := repo.LlmWorkspace.WithContext(ctx).Find()
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Debugf("当前没有用户拥有工作区")
+		}
+		return
+	}
+	userWorkspaceMap := make(map[int64]*model.LlmWorkspace)
+	for _, userWorkspace := range workspaceList {
+		userWorkspaceMap[userWorkspace.Userid] = userWorkspace
+	}
+
+	fileUsers, err := repo.FileUser.WithContext(ctx).Where(repo.FileUser.FileID.Eq(file.ID)).Order(repo.FileUser.Userid.Asc()).Find()
+	if err != nil {
+		if err != gorm.ErrRecordNotFound {
+			log.Debugf("error query file user %v", err)
+			return
+		}
+	}
+	fileUserIds := make([]int64, len(fileUsers))
+	fileUserMap := make(map[int64]*model.FileUser)
+
+	for i, fileUser := range fileUsers {
+		fileUserIds[i] = fileUser.Userid
+		fileUserMap[fileUser.Userid] = fileUser
+	}
+	complement := make([]int64, 0)
+	if len(fileUsers) != 0 {
+		if fileUsers[0].Userid != 0 {
+			for _, userWorkspace := range workspaceList {
+				if _, exists := fileUserMap[userWorkspace.Userid]; !exists {
+					complement = append(complement, userWorkspace.Userid)
+				}
+			}
+		}
+	}
+	// 文件夹
+	if file.Type == FOLDER {
+		files := make([]*model.File, 0)
+		GetAllFile(ctx, file.ID, &files)
+
+		for _, file := range files {
+			if !isSupport(file) {
+				log.Debugf("不支持的文件类型 文件ID=%d, 类型=%s", file.ID, file.Type)
+				continue
+			}
+
+			document, err := repo.LlmDocument.WithContext(ctx).
+				Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(file.ID)).
+				First()
+			if err != nil && err != gorm.ErrRecordNotFound {
+				continue
+			}
+
+			for _, fileUser := range fileUsers {
+				if fileUser.Userid == 0 {
+					for _, userWorkspace := range userWorkspaceMap {
+						workspaceService.Upload(userWorkspace.Userid, document.ID)
+					}
+					break
+				} else {
+					workspaceService.Upload(fileUser.Userid, document.ID)
+				}
+			}
+			for _, u := range complement {
+				if u == file.Userid {
+					continue
+				}
+				workspaceService.RemoveDocument(u, document.ID)
+			}
+
+			workspaceService.Upload(file.Userid, document.ID)
+		}
+
+	} else {
+		if !isSupport(file) {
+			return
+		}
+		document, err := repo.LlmDocument.WithContext(ctx).
+			Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(file.ID)).
+			First()
+		if err != nil && err != gorm.ErrRecordNotFound {
+			return
+		}
+		for _, fileUser := range fileUsers {
+			if fileUser.Userid == 0 {
+				for _, userWorkspace := range userWorkspaceMap {
+					workspaceService.Upload(userWorkspace.Userid, document.ID)
+				}
+				break
+			} else {
+				workspaceService.Upload(fileUser.Userid, document.ID)
+			}
+		}
+		workspaceService.Upload(file.Userid, document.ID)
+		for _, u := range complement {
+			if u == file.Userid {
+				continue
+			}
+			workspaceService.RemoveDocument(u, document.ID)
+		}
+	}
+}
+
+func GetAllFile(ctx context.Context, fileId int64, fileListPtr *[]*model.File) {
+	fileList := *fileListPtr
+
+	subFiles, err := repo.File.WithContext(ctx).Where(repo.File.Pid.Eq(fileId)).Find()
+	if err != nil {
+		return
+	}
+
+	*fileListPtr = append(fileList, subFiles...)
+
+	for _, file := range subFiles {
+		if file.Type == FOLDER {
+			GetAllFile(ctx, file.ID, fileListPtr)
+		}
+	}
 }
 
 func verifyFile(file *model.File, fileContent *model.FileContent) bool {
@@ -132,6 +276,16 @@ func verifyFile(file *model.File, fileContent *model.FileContent) bool {
 		return true
 	default:
 		return true
+	}
+}
+
+// isSupport 是否支持该文件
+func isSupport(file *model.File) bool {
+	switch file.Type {
+	case FileTypePPT, FileTypeWord, FileTypePDF, FileTypeTxt, FileTypeDoc:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -213,7 +367,7 @@ func (f *FileServiceImpl) updateOrInsertDocument(ctx context.Context, file *mode
 func handleFileAuth(fileId int64) {
 	ctx := context.Background()
 	file, err := repo.File.WithContext(ctx).Where(repo.File.ID.Eq(fileId)).First()
-	log.Infof("正在处理文件[$%v]共享情况", fileId)
+	log.Infof("正在处理文件[#%v]共享情况", fileId)
 	if err != nil {
 		log.Debugf("Error query file %v", err)
 		return
@@ -263,6 +417,7 @@ func handleFileAuth(fileId int64) {
 		for _, userid := range shareUserIds {
 			workspaceService.Upload(userid, document.ID)
 		}
+		workspaceService.Upload(file.Userid, document.ID)
 	}
 
 }

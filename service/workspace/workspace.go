@@ -102,6 +102,38 @@ func (w *WorkspaceServiceImpl) Update(userid int64, documentId int64) bool {
 	return false
 }
 
+func (w *WorkspaceServiceImpl) RemoveDocument(userid int64, documentId int64) error {
+	log.Debugf("移除文档UserId=%d, documentId=%d", userid, documentId)
+	ctx := context.Background()
+	workspace, err := repo.LlmWorkspace.WithContext(ctx).Where(repo.LlmWorkspace.Userid.Eq(userid)).First()
+	if err != nil {
+		return err
+	}
+	document, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.ID.Eq(documentId)).First()
+	if err != nil {
+		return err
+	}
+	// workspaceDocument, err := repo.LlmWorkspaceDocument.WithContext(ctx).
+	// 	Where(repo.LlmWorkspaceDocument.WorkspaceID.Eq(workspace.ID), repo.LlmWorkspaceDocument.DocumentID.Eq(documentId)).
+	// 	First()
+	// if err != nil && err != gorm.ErrRecordNotFound {
+	// 	return err
+	// }
+	resultInfo, err := repo.LlmWorkspaceDocument.WithContext(ctx).
+		Where(repo.LlmWorkspaceDocument.WorkspaceID.Eq(workspace.ID),
+			repo.LlmWorkspaceDocument.DocumentID.Eq(document.ID),
+		).Delete()
+	_ = resultInfo
+	if err != nil {
+		return err
+	}
+	resp, err := anythingllmClient.UpdateEmbeddings(workspace.Slug, wk.UpdateEmbeddingsParams{
+		Deletes: []string{document.Location},
+	})
+	_ = resp
+	return err
+}
+
 func (w *WorkspaceServiceImpl) Create(userid int64) {
 	workspace, err := repo.LlmWorkspace.WithContext(context.Background()).Where(repo.LlmWorkspace.Userid.Eq(userid)).First()
 	if err != nil {
