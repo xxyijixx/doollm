@@ -38,6 +38,7 @@ type FileService interface {
 	Traversal()
 	UploadWorkspace()
 	Update()
+	TravelsalFileUser()
 	Delete()
 }
 
@@ -134,6 +135,7 @@ func (f *FileServiceImpl) Delete(fileId int64) {
 
 // Update 文件访问权限变更，更新用户工作区
 func (f *FileServiceImpl) Update(fileId int64) {
+	log.Debugf("正在处理用户文件更新 fileid=%d", fileId)
 	ctx := context.Background()
 	file, err := repo.File.WithContext(ctx).Where(repo.File.ID.Eq(fileId)).First()
 	if err != nil {
@@ -193,7 +195,7 @@ func (f *FileServiceImpl) Update(fileId int64) {
 			document, err := repo.LlmDocument.WithContext(ctx).
 				Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(file.ID)).
 				First()
-			if err != nil && err != gorm.ErrRecordNotFound {
+			if err != nil {
 				continue
 			}
 
@@ -224,7 +226,7 @@ func (f *FileServiceImpl) Update(fileId int64) {
 		document, err := repo.LlmDocument.WithContext(ctx).
 			Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(file.ID)).
 			First()
-		if err != nil && err != gorm.ErrRecordNotFound {
+		if err != nil {
 			return
 		}
 		for _, fileUser := range fileUsers {
@@ -244,6 +246,18 @@ func (f *FileServiceImpl) Update(fileId int64) {
 			}
 			workspaceService.RemoveDocument(u, document.ID)
 		}
+	}
+}
+
+// TravelsalFileUser 遍历文件用户，进行更新
+func (f *FileServiceImpl) TravelsalFileUser() {
+
+	fileUsers, err := repo.FileUser.WithContext(context.Background()).Distinct(repo.FileUser.FileID).Find()
+	if err != nil {
+		return
+	}
+	for _, fileUser := range fileUsers {
+		f.Update(fileUser.FileID)
 	}
 }
 

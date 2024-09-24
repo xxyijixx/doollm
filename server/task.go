@@ -33,7 +33,6 @@ func StartScheduledTask() {
 		log.Errorf("开启定时任务失败 %v", err)
 	}
 	_, err = scheduledTask.AddTask("0 15,45 * * * ? ", fileService.UploadWorkspace)
-	fileService.UploadWorkspace()
 	if err != nil {
 		log.Errorf("开启定时任务失败 %v", err)
 	}
@@ -48,5 +47,10 @@ func StartScheduledTask() {
 		log.Errorf("开启定时任务失败 %v", err)
 	}
 
+	_, err = scheduledTask.AddTask("0 28/58 * * * ? ", fileService.TravelsalFileUser)
+	if err != nil {
+		log.Errorf("开启定时任务失败 %v", err)
+	}
+	fileService.TravelsalFileUser()
 	scheduledTask.Start()
 }

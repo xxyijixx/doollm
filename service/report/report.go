@@ -10,7 +10,7 @@ import (
 	linktype "doollm/service/document/type"
 	"doollm/service/workspace"
 	"encoding/json"
-	"strconv"
+	"fmt"
 	"strings"
 	"time"
 
@@ -130,7 +130,7 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 	if err != nil {
 		return err
 	}
-	rowTitle := "report-" + strconv.FormatInt(report.Userid, 10) + "-" + strconv.FormatInt(report.ID, 10) + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+	rowTitle := fmt.Sprintf("report-%d-%d-%d", report.Userid, report.ID, time.Now().Unix())
 	params := documents.RawTextParams{
 		TextContent: string(text),
 		Metadata: documents.RawTextMetadata{

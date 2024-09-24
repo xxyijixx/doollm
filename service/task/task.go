@@ -10,7 +10,6 @@ import (
 	"doollm/service/workspace"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -123,6 +122,7 @@ func handleProject(ctx context.Context, project *model.Project, userMap *map[int
 		log.Printf("Error querying project task: %v", err)
 		return
 	}
+	// 处理项目下的任务
 	for _, projectTask := range projectTasks {
 		projectTaskHandle := &ProjectTaskHandle{
 			ctx:              context.Background(),
@@ -132,15 +132,16 @@ func handleProject(ctx context.Context, project *model.Project, userMap *map[int
 			userMap:          userMap,
 			projectColumnMap: &projectColumnMap,
 		}
-		projectTaskHandle.handleTask()
+		projectTaskHandle.HandleTask()
 	}
 
 }
 
-func (h *ProjectTaskHandle) handleTask() {
+// HandleTask 处理任务
+func (h *ProjectTaskHandle) HandleTask() {
 
 	// 附件处理
-	h.handleTaskAttachment()
+	h.HandleTaskAttachment()
 
 	projectColumnMap := *h.projectColumnMap
 	h.rowTask.ProjectName = h.project.Name
@@ -164,7 +165,6 @@ func (h *ProjectTaskHandle) handleTask() {
 			return "已完成"
 		}(h.task.CompleteAt)
 	} else {
-
 		h.rowTask.Status = strings.ReplaceAll(h.task.FlowItemName, "|", "\\|")
 	}
 	h.FindProjectUser()
@@ -180,29 +180,34 @@ func (h *ProjectTaskHandle) handleTask() {
 		if !subTask.CompleteAt.IsZero() {
 			completeNum += 1
 		}
-		subTaskRowText[i].Name = subTask.Name
-		subTaskRowText[i].Owner = FindTaskUser(subTask.ID, h.userMap, true)
-		subTaskRowText[i].StartAt = subTask.StartAt
-		subTaskRowText[i].EndAt = subTask.EndAt
-		subTaskRowText[i].CompleteAt = subTask.CompleteAt
-		if subTask.FlowItemID == 0 {
-			subTaskRowText[i].Status = func(date time.Time) string {
-				if date.IsZero() {
-					return "未完成"
-				}
-				return "已完成"
-			}(h.task.CompleteAt)
-		} else {
-
-			subTaskRowText[i].Status = strings.ReplaceAll(subTask.FlowItemName, "|", "\\|")
-		}
+		h.HandleSubTask(&subTaskRowText[i], subTask)
 	}
 	h.rowTask.SubComplete = completeNum
 	h.rowTask.SubTask = subTaskRowText
 	h.updateOrInsertDocument()
 }
 
-func (h *ProjectTaskHandle) handleTaskAttachment() {
+// handleSubTask 处理子任务
+func (h *ProjectTaskHandle) HandleSubTask(subTaskRowText *SubTaskRowText, subTask *model.ProjectTask) {
+	subTaskRowText.Name = subTask.Name
+	subTaskRowText.Owner = FindTaskUser(subTask.ID, h.userMap, true)
+	subTaskRowText.StartAt = subTask.StartAt
+	subTaskRowText.EndAt = subTask.EndAt
+	subTaskRowText.CompleteAt = subTask.CompleteAt
+	if subTask.FlowItemID == 0 {
+		subTaskRowText.Status = func(date time.Time) string {
+			if date.IsZero() {
+				return "未完成"
+			}
+			return "已完成"
+		}(h.task.CompleteAt)
+	} else {
+		subTaskRowText.Status = strings.ReplaceAll(subTask.FlowItemName, "|", "\\|")
+	}
+}
+
+// HandleTaskAttachment 处理任务附件信息，添加附件名称，附件内容未进行上传
+func (h *ProjectTaskHandle) HandleTaskAttachment() {
 	files, err := repo.ProjectTaskFile.WithContext(h.ctx).Where(repo.ProjectTaskFile.TaskID.Eq(h.task.ID)).Find()
 	if err != nil {
 		log.Printf("Error query task file %v", err)
@@ -210,6 +215,7 @@ func (h *ProjectTaskHandle) handleTaskAttachment() {
 	}
 	h.attachment = files
 	h.rowTask.Attachment = make([]string, len(files))
+
 	for i, file := range files {
 		h.rowTask.Attachment[i] = file.Name
 	}
@@ -228,7 +234,7 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 		return nil
 	}
 
-	fileName := "task-" + strconv.FormatInt(h.project.ID, 10) + "-" + strconv.FormatInt(h.task.ID, 10) + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+	fileName := fmt.Sprintf("task-%d-%d-%d", h.project.ID, h.task.ID, time.Now().Unix())
 	res, err := anythingllmClient.UploadFileFormString(generateMarkdown(*h.rowTask), fileName, "md")
 	if err != nil || !res.Success {
 		return err
@@ -279,6 +285,7 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 
 }
 
+// FindProjectUser 查找项目成员
 func (h *ProjectTaskHandle) FindProjectUser() {
 	projectId := h.project.ID
 	projectUsers, err := repo.ProjectUser.WithContext(context.Background()).Where(repo.ProjectUser.ProjectID.Eq(projectId)).Find()
@@ -312,6 +319,7 @@ func (h *ProjectTaskHandle) FindProjectUser() {
 	}
 }
 
+// FindTaskUser 查找任务成员，包含负责人或协助人员
 func FindTaskUser(taskId int64, userMap *map[int64]*model.User, isOwner bool) string {
 	taskUsers, err := repo.ProjectTaskUser.WithContext(context.Background()).Where(repo.ProjectTaskUser.TaskID.Eq(taskId)).Find()
 	if err != nil {
@@ -333,9 +341,9 @@ func GetUserNames(userIds []int64, userMap *map[int64]*model.User) string {
 	uMap := *userMap
 	for i, userId := range userIds {
 		user := uMap[userId]
-		if user.Nickname != "" {
-			names[i] = user.Nickname
-		} else {
+
+		names[i] = user.Nickname
+		if names[i] == "" {
 			names[i] = user.Email
 		}
 

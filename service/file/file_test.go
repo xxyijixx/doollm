@@ -13,3 +13,7 @@ func TestQueryFile(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	fileService.Update(32)
 }
+
+func TestTravelsalFileUser(t *testing.T) {
+	fileService.TravelsalFileUser()
+}
