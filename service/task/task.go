@@ -61,7 +61,7 @@ func (t *TaskServiceImpl) Traversal() {
 
 	// 上传用户工作区
 	t.UploadWorkspace()
-
+	t.Update()
 }
 
 func (t *TaskServiceImpl) UploadWorkspace() {
@@ -82,8 +82,101 @@ func (t *TaskServiceImpl) UploadWorkspace() {
 	}
 }
 
+// Update 更新
 func (t *TaskServiceImpl) Update() {
+	log.Info("Start of task processing")
+	ctx := context.Background()
+	documents, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.TASK)).Find()
+	if err != nil {
+		log.Info("查询文档信息失败: ", err)
+		return
+	}
+	users, err := repo.User.WithContext(ctx).Find()
+	if err != nil {
+		return
+	}
+	// 构建 UserId 到 User 的映射
+	userMap := make(map[int64]*model.User)
+	for _, user := range users {
+		userMap[user.Userid] = user
+	}
+	for _, document := range documents {
+		log.Infof("Start of task[%d] processing", document.LinkId)
+		missingFromTasks, missingFromExtras, extras, err := compareTaskAndExtraOwners(ctx, document)
+		if err != nil {
+			continue
+		}
+		// 从用户工作区移除
+		for _, id := range missingFromTasks {
+			workspaceService.RemoveDocument(id, document.ID)
+		}
+		// 添加到用户工作区
+		for _, id := range missingFromExtras {
+			workspaceService.Upload(id, document.ID)
+		}
 
+		// 更新文档拓展信息
+		jsonData, err := json.Marshal(extras)
+		if err != nil {
+			continue
+		}
+		_, err = repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.ID.Eq(document.ID)).Update(repo.LlmDocument.LinkExtras, string(jsonData))
+		if err != nil {
+			log.Debugf("更新任务文档拓展信息失败: %v", err)
+		}
+	}
+	log.Info("End of task processing")
+}
+
+// compareTaskAndExtraOwners 获取需要
+func compareTaskAndExtraOwners(ctx context.Context, document *model.LlmDocument) (missingFromTasks []int64, missingFromExtras []int64, extras TaskDocumentExtras, err error) {
+	// 查询任务的负责人
+	taskUsers, err := repo.ProjectTaskUser.WithContext(ctx).Where(
+		repo.ProjectTaskUser.TaskID.Eq(document.LinkId),
+		repo.ProjectTaskUser.Owner.Eq(1)).Find()
+	if err != nil {
+		return
+	}
+
+	// 提取任务用户的所有者 ID
+	taskOwnerIds := make([]int64, len(taskUsers))
+	for i, user := range taskUsers {
+		taskOwnerIds[i] = user.Userid
+	}
+
+	// 解析文档中的额外信息
+	if err = json.Unmarshal([]byte(document.LinkExtras), &extras); err != nil {
+		return
+	}
+
+	// 创建两个映射表，用于快速查找
+	taskOwnerIdSet := make(map[int64]bool, len(taskOwnerIds))
+	extraOwnerIdSet := make(map[int64]bool, len(extras.Owner))
+
+	for _, id := range taskOwnerIds {
+		taskOwnerIdSet[id] = true
+	}
+	for _, id := range extras.Owner {
+		extraOwnerIdSet[id] = true
+	}
+
+	// 找出 extras.Owner 中不在 taskOwnerIds 中的 ID
+	for _, id := range extras.Owner {
+		if _, exists := taskOwnerIdSet[id]; !exists {
+			missingFromTasks = append(missingFromTasks, id)
+		}
+	}
+
+	// 找出 taskOwnerIds 中不在 extras.Owner 中的 ID
+	for _, id := range taskOwnerIds {
+		if _, exists := extraOwnerIdSet[id]; !exists {
+			missingFromExtras = append(missingFromExtras, id)
+		}
+	}
+
+	extras.Owner = taskOwnerIds
+
+	return
 }
 
 // handleProject 处理项目
