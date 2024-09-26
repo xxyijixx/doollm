@@ -59,6 +59,9 @@ func (t *TaskServiceImpl) Traversal() {
 		handleProject(ctx, project, &userMap)
 	}
 
+	// 上传用户工作区
+	t.UploadWorkspace()
+
 }
 
 func (t *TaskServiceImpl) UploadWorkspace() {

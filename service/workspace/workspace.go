@@ -35,9 +35,10 @@ func (w *WorkspaceServiceImpl) Verify(userid int64) bool {
 }
 
 func (w *WorkspaceServiceImpl) Upload(userid int64, documentId int64) error {
-	fmt.Println("正在上传", userid, documentId)
+	log.Debugf("正在上传 userid=%d, documentId=%d", userid, documentId)
 	var err error
 	if !w.Verify(userid) {
+		log.Debugf("用户[#%d]没有工作区权限", userid)
 		return fmt.Errorf("%v", "用户没有工作区权限")
 	}
 	ctx := context.Background()
@@ -57,7 +58,7 @@ func (w *WorkspaceServiceImpl) Upload(userid int64, documentId int64) error {
 		return err
 	}
 	if workspaceDocument != nil {
-		// log.Debug("The document already exists in the workspace")
+		log.Debugf("文档[#%d]已经存在于用户[#%d]的工作区", documentId, userid)
 		return fmt.Errorf("the document already exists in the workspace")
 	}
 

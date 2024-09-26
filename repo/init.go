@@ -66,18 +66,18 @@ func (l *LogrusLogger) Trace(ctx context.Context, begin time.Time, fc func() (st
 func init() {
 	var err error
 	// 初始化 logrus
-	log := logrus.New()
-	log.SetFormatter(&logrus.JSONFormatter{})
-	log.SetLevel(logrus.InfoLevel)
-	logrusLogger := &LogrusLogger{
-		logger: log,
-	}
+	// log := logrus.New()
+	// log.SetFormatter(&logrus.TextFormatter{})
+	// log.SetLevel(logrus.InfoLevel)
+	// logrusLogger := &LogrusLogger{
+	// 	logger: log,
+	// }
 	dsn := config.EnvConfig.GetDSN()
 	DB, err = gorm.Open(
 		mysql.Open(dsn),
 		&gorm.Config{
 			PrepareStmt: true,
-			Logger:      logrusLogger,
+			// Logger:      logrusLogger,
 		},
 	)
 	// SetDefault(DB)

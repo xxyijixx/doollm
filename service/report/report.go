@@ -82,6 +82,9 @@ func (r *ReportServiceImpl) Traversal() {
 			log.Error(err)
 		}
 	}
+
+	// 上传用户工作区
+	r.UploadWorkspace()
 }
 
 func (r *ReportServiceImpl) UploadWorkspace() {

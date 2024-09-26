@@ -61,6 +61,7 @@ type Content struct {
 }
 
 func (f *FileServiceImpl) Traversal() {
+	log.Infof("Start of file processing")
 	ctx := context.Background()
 	// 将所有符合条件的文件查询出来
 	conditions := []string{
@@ -107,9 +108,16 @@ func (f *FileServiceImpl) Traversal() {
 
 	}
 
+	// 更新工作区
+	f.UploadWorkspace()
+	// 检测用户权限变化
+	f.TravelsalFileUser()
+
+	log.Infof("End of file processing")
 }
 
 func (f *FileServiceImpl) UploadWorkspace() {
+	log.Debugf("Uploading user workspace ...")
 	documents, err := repo.LlmDocument.WithContext(context.Background()).Where(repo.LlmDocument.LinkType.Eq(linktype.FILE)).Find()
 	if err != nil {
 		return
@@ -251,7 +259,7 @@ func (f *FileServiceImpl) Update(fileId int64) {
 
 // TravelsalFileUser 遍历文件用户，进行更新
 func (f *FileServiceImpl) TravelsalFileUser() {
-
+	log.Debugf("processing user share ...")
 	fileUsers, err := repo.FileUser.WithContext(context.Background()).Distinct(repo.FileUser.FileID).Find()
 	if err != nil {
 		return
