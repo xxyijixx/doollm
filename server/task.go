@@ -23,6 +23,7 @@ func StartScheduledTask() {
 	if err != nil {
 		log.Errorf("开启定时任务失败 %v", err)
 	}
+	taskService.Traversal()
 	_, err = scheduledTask.AddTask("0 5,35 * * * ? ", taskService.Traversal)
 	if err != nil {
 		log.Errorf("开启定时任务失败 %v", err)

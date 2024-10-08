@@ -34,5 +34,11 @@ type SubTaskRowText struct {
 }
 
 type TaskDocumentExtras struct {
-	Owner []int64 `json:"owner"`
+	Owner   []int64         `json:"owner"`
+	SubTask []SubTaskExtras `json:"sub_task"`
+}
+
+type SubTaskExtras struct {
+	TaskId    int64     `json:"task_id"`
+	UpdatedAt time.Time `json:"updatd_at"`
 }

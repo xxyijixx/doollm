@@ -10,6 +10,8 @@ import (
 	"doollm/service/workspace"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -61,7 +63,7 @@ func (t *TaskServiceImpl) Traversal() {
 
 	// 上传用户工作区
 	t.UploadWorkspace()
-	t.Update()
+	// t.UpdateByTaskOwner()
 }
 
 func (t *TaskServiceImpl) UploadWorkspace() {
@@ -82,8 +84,8 @@ func (t *TaskServiceImpl) UploadWorkspace() {
 	}
 }
 
-// Update 更新
-func (t *TaskServiceImpl) Update() {
+// Update 根据task的负责人信息进行更新
+func (t *TaskServiceImpl) UpdateByTaskOwner() {
 	log.Info("Start of task processing")
 	ctx := context.Background()
 	documents, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.TASK)).Find()
@@ -124,6 +126,33 @@ func (t *TaskServiceImpl) Update() {
 		if err != nil {
 			log.Debugf("更新任务文档拓展信息失败: %v", err)
 		}
+	}
+	log.Info("End of task processing")
+}
+
+// Update 根据task的子项进行更新
+func (t *TaskServiceImpl) UpdateBySubTask() {
+	log.Info("Start of task processing")
+	ctx := context.Background()
+	documents, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.TASK)).Find()
+	if err != nil {
+		log.Info("查询文档信息失败: ", err)
+		return
+	}
+	users, err := repo.User.WithContext(ctx).Find()
+	if err != nil {
+		return
+	}
+	// 构建 UserId 到 User 的映射
+	userMap := make(map[int64]*model.User)
+	for _, user := range users {
+		userMap[user.Userid] = user
+	}
+	for _, document := range documents {
+
+		log.Infof("Start of task[%d] processing", document.LinkId)
+		// 需要额外写一个更新逻辑，引用原来部分
+
 	}
 	log.Info("End of task processing")
 }
@@ -239,6 +268,9 @@ func (h *ProjectTaskHandle) HandleTask() {
 	// 附件处理
 	h.HandleTaskAttachment()
 
+	// 额外的内容
+	h.extras = &TaskDocumentExtras{}
+
 	projectColumnMap := *h.projectColumnMap
 	h.rowTask.ProjectName = h.project.Name
 	column, exist := projectColumnMap[h.task.ColumnID]
@@ -272,6 +304,8 @@ func (h *ProjectTaskHandle) HandleTask() {
 	h.rowTask.SubNum = len(subTasks)
 	completeNum := 0
 	subTaskRowText := make([]SubTaskRowText, len(subTasks))
+
+	h.extras.SubTask = make([]SubTaskExtras, 0)
 	for i, subTask := range subTasks {
 		if !subTask.CompleteAt.IsZero() {
 			completeNum += 1
@@ -300,6 +334,12 @@ func (h *ProjectTaskHandle) HandleSubTask(subTaskRowText *SubTaskRowText, subTas
 	} else {
 		subTaskRowText.Status = strings.ReplaceAll(subTask.FlowItemName, "|", "\\|")
 	}
+
+	// 记录子任务的额外保存信息
+	h.extras.SubTask = append(h.extras.SubTask, SubTaskExtras{
+		TaskId:    subTask.ID,
+		UpdatedAt: subTask.UpdatedAt,
+	})
 }
 
 // HandleTaskAttachment 处理任务附件信息，添加附件名称，附件内容未进行上传
@@ -317,6 +357,45 @@ func (h *ProjectTaskHandle) HandleTaskAttachment() {
 	}
 }
 
+// compareTaskExtras
+func compareTaskExtras(taskExtras TaskDocumentExtras, documentTaskExtrasStr string) bool {
+	documentTaskExtras := TaskDocumentExtras{}
+	// 解析文档中的额外信息
+	if err := json.Unmarshal([]byte(documentTaskExtrasStr), &documentTaskExtras); err != nil {
+		return false
+	}
+	// 1. 比较 Owner 切片：排序后再比较
+	if len(taskExtras.Owner) != len(documentTaskExtras.Owner) {
+		return false
+	}
+	sort.Slice(taskExtras.Owner, func(i, j int) bool {
+		return taskExtras.Owner[i] < taskExtras.Owner[j]
+	})
+	sort.Slice(documentTaskExtras.Owner, func(i, j int) bool {
+		return documentTaskExtras.Owner[i] < documentTaskExtras.Owner[j]
+	})
+	if !reflect.DeepEqual(taskExtras.Owner, documentTaskExtras.Owner) {
+		return false
+	}
+
+	// 2. 比较 SubTask 切片：按 TaskId 排序后再比较每个字段
+	if len(taskExtras.SubTask) != len(documentTaskExtras.SubTask) {
+		return false
+	}
+	sort.Slice(taskExtras.SubTask, func(i, j int) bool {
+		return taskExtras.SubTask[i].TaskId < taskExtras.SubTask[j].TaskId
+	})
+	sort.Slice(documentTaskExtras.SubTask, func(i, j int) bool {
+		return documentTaskExtras.SubTask[i].TaskId < documentTaskExtras.SubTask[j].TaskId
+	})
+	for i := range taskExtras.SubTask {
+		if taskExtras.SubTask[i].TaskId != documentTaskExtras.SubTask[i].TaskId || !taskExtras.SubTask[i].UpdatedAt.Equal(documentTaskExtras.SubTask[i].UpdatedAt) {
+			return false
+		}
+	}
+	return true
+}
+
 func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 	var err error
 	// 处理
@@ -327,7 +406,10 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 	}
 	if document != nil && document.LastModifiedAt.Equal(h.task.UpdatedAt) {
 		log.Debugf("Task[#%d]内容没有更新", h.task.ID)
-		return nil
+		if compareTaskExtras(*h.extras, document.LinkExtras) {
+			log.Debugf("Task[#%d]附加信息没有变更", h.task.ID)
+			return nil
+		}
 	}
 
 	fileName := fmt.Sprintf("task-%d-%d-%d", h.project.ID, h.task.ID, time.Now().Unix())
@@ -369,6 +451,7 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 			Location:           doc.Location,
 			Title:              doc.Title,
 			DocID:              doc.ID,
+			LinkExtras:         string(extras),
 			TokenCountEstimate: int64(doc.TokenCountEstimate),
 		})
 	if err != nil || result.RowsAffected == 0 {
@@ -410,9 +493,8 @@ func (h *ProjectTaskHandle) FindProjectUser() {
 	for i, taskUser := range taskUsers {
 		taskOwnerIds[i] = taskUser.Userid
 	}
-	h.extras = &TaskDocumentExtras{
-		Owner: taskOwnerIds,
-	}
+	// 任务负责人
+	h.extras.Owner = taskOwnerIds
 }
 
 // FindTaskUser 查找任务成员，包含负责人或协助人员
