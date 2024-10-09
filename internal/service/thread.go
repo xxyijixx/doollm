@@ -4,13 +4,13 @@ import (
 	"database/sql"
 	"doollm/internal/model"
 	"doollm/internal/repository"
-	"doollm/pkg/settime"
 	dbModel "doollm/repo/model"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
+	"time"
 )
 
 // 获取某个对话窗口的所有历史记录
@@ -31,7 +31,7 @@ func FetchChatHistory(workspaceSlug, threadSlug string) ([]model.ChatMessage, er
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func FetchChatHistory(workspaceSlug, threadSlug string) ([]model.ChatMessage, er
 
 // 更新最后一条消息并返回所有字段
 func UpdateLastMessage(sessionID, lastMessage string) (dbModel.HistoryChat, error) {
-	currentTime := settime.GetCurrentFormattedTime()
+	currentTime := time.Now().Format(time.DateTime)
 	query := `UPDATE pre_history_aichats SET last_messages = ?, update_time = ? WHERE session_id = ?`
 	_, err := repository.DB.Exec(query, lastMessage, currentTime, sessionID)
 	if err != nil {

@@ -2,7 +2,6 @@ package service
 
 import (
 	"doollm/internal/repository"
-	"doollm/pkg/settime"
 	"log"
 	"time"
 )
@@ -20,7 +19,7 @@ func SyncUsers() {
 
 // 同步 pre_users 表用户
 func syncUsers() {
-	currentTime := settime.GetCurrentFormattedTime()
+	currentTime := time.Now().Format(time.DateTime)
 	tx, err := repository.DB.Begin()
 	if err != nil {
 		log.Println("Failed to begin transaction:", err)

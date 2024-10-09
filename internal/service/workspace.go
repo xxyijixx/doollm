@@ -5,14 +5,14 @@ import (
 	"database/sql"
 	"doollm/internal/model"
 	"doollm/internal/repository"
-	"doollm/pkg/settime"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // 发送请求到外部 API 创建工作区
@@ -31,7 +31,7 @@ func CreateExternalWorkspace(name string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	var apiResp model.ExternalAPIResponse
 	if err := json.Unmarshal(body, &apiResp); err != nil {
 		return "", err
@@ -100,7 +100,7 @@ func GetWorkspaceSlug(userID int) (string, error) {
 
 // 存储对话窗口 slug 、模型和头像
 func StoreChatData(model, avatar, threadSlug string, userID int) error {
-	currentTime := settime.GetCurrentFormattedTime()
+	currentTime := time.Now().Format(time.DateTime)
 	query := `
 	INSERT INTO pre_history_aichats (model, avatar, session_id, user_id, create_time, update_time)
 	VALUES (?, ?, ?, ?, ?, ?)
