@@ -441,13 +441,13 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 		log.Printf("Error query document %v", err)
 		return err
 	}
-	// if document != nil && document.LastModifiedAt.Equal(h.task.UpdatedAt) {
-	// 	log.Debugf("Task[#%d]内容没有更新", h.task.ID)
-	// 	if compareTaskExtras(*h.extras, document.LinkExtras) {
-	// 		log.Debugf("Task[#%d]附加信息没有变更", h.task.ID)
-	// 		return nil
-	// 	}
-	// }
+	if document != nil && document.LastModifiedAt.Equal(h.task.UpdatedAt) {
+		log.Debugf("Task[#%d]内容没有更新", h.task.ID)
+		if compareTaskExtras(*h.extras, document.LinkExtras) {
+			log.Debugf("Task[#%d]附加信息没有变更", h.task.ID)
+			return nil
+		}
+	}
 
 	fileName := fmt.Sprintf("task-%d-%d-%d", h.project.ID, h.task.ID, time.Now().Unix())
 	res, err := anythingllmClient.UploadFileFormString(generateMarkdown(*h.rowTask), fileName, "md")

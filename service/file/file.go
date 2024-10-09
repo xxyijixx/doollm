@@ -160,11 +160,13 @@ func (f *FileServiceImpl) Update(fileId int64) {
 		}
 		return
 	}
+	// 构建工作区用户Map
 	userWorkspaceMap := make(map[int64]*model.LlmWorkspace)
 	for _, userWorkspace := range workspaceList {
 		userWorkspaceMap[userWorkspace.Userid] = userWorkspace
 	}
 
+	// 查找文件可见用户，按用户ID进行升序排序，userid为0表示所有人
 	fileUsers, err := repo.FileUser.WithContext(ctx).Where(repo.FileUser.FileID.Eq(file.ID)).Order(repo.FileUser.Userid.Asc()).Find()
 	if err != nil {
 		if err != gorm.ErrRecordNotFound {
@@ -179,12 +181,13 @@ func (f *FileServiceImpl) Update(fileId int64) {
 		fileUserIds[i] = fileUser.Userid
 		fileUserMap[fileUser.Userid] = fileUser
 	}
-	complement := make([]int64, 0)
+	// 在文件可见用户中，哪些用户没有工作区权限，需要移除
+	permissionDeniedUser := make([]int64, 0)
 	if len(fileUsers) != 0 {
 		if fileUsers[0].Userid != 0 {
 			for _, userWorkspace := range workspaceList {
 				if _, exists := fileUserMap[userWorkspace.Userid]; !exists {
-					complement = append(complement, userWorkspace.Userid)
+					permissionDeniedUser = append(permissionDeniedUser, userWorkspace.Userid)
 				}
 			}
 		}
@@ -193,68 +196,51 @@ func (f *FileServiceImpl) Update(fileId int64) {
 	if file.Type == FOLDER {
 		files := make([]*model.File, 0)
 		GetAllFile(ctx, file.ID, &files)
-
+		// 处理文件
 		for _, file := range files {
-			if !isSupport(file) {
-				log.Debugf("不支持的文件类型 文件ID=%d, 类型=%s", file.ID, file.Type)
-				continue
-			}
-
-			document, err := repo.LlmDocument.WithContext(ctx).
-				Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(file.ID)).
-				First()
-			if err != nil {
-				continue
-			}
-
-			for _, fileUser := range fileUsers {
-				if fileUser.Userid == 0 {
-					for _, userWorkspace := range userWorkspaceMap {
-						workspaceService.Upload(userWorkspace.Userid, document.ID)
-					}
-					break
-				} else {
-					workspaceService.Upload(fileUser.Userid, document.ID)
-				}
-			}
-			for _, u := range complement {
-				if u == file.Userid {
-					continue
-				}
-				workspaceService.RemoveDocument(u, document.ID)
-			}
-
-			workspaceService.Upload(file.Userid, document.ID)
+			updateFile(ctx, file, permissionDeniedUser, fileUsers, userWorkspaceMap)
 		}
-
 	} else {
-		if !isSupport(file) {
-			return
-		}
-		document, err := repo.LlmDocument.WithContext(ctx).
-			Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(file.ID)).
-			First()
-		if err != nil {
-			return
-		}
-		for _, fileUser := range fileUsers {
-			if fileUser.Userid == 0 {
-				for _, userWorkspace := range userWorkspaceMap {
-					workspaceService.Upload(userWorkspace.Userid, document.ID)
-				}
-				break
-			} else {
-				workspaceService.Upload(fileUser.Userid, document.ID)
+		updateFile(ctx, file, permissionDeniedUser, fileUsers, userWorkspaceMap)
+	}
+}
+
+// updateFile 更新文件
+func updateFile(ctx context.Context, file *model.File, permissionDeniedUser []int64, fileUsers []*model.FileUser, userWorkspaceMap map[int64]*model.LlmWorkspace) {
+	// 判断文件类型是否支持
+	if !isSupport(file) {
+		log.Debugf("文件[#%d]不支持的文件类型: %s", file.ID, file.Type)
+		return
+	}
+
+	document, err := repo.LlmDocument.WithContext(ctx).
+		Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(file.ID)).
+		First()
+	if err != nil {
+		log.Debugf("错误查询文件[#%d]对应的文档信息: %v", file.ID, err)
+		return
+	}
+
+	for _, fileUser := range fileUsers {
+		// 如果共享所有人，对所有用户工作区上传，否则单个上传
+		if fileUser.Userid == 0 {
+			for _, userWorkspace := range userWorkspaceMap {
+				workspaceService.Upload(userWorkspace.Userid, document.ID)
 			}
-		}
-		workspaceService.Upload(file.Userid, document.ID)
-		for _, u := range complement {
-			if u == file.Userid {
-				continue
-			}
-			workspaceService.RemoveDocument(u, document.ID)
+			break
+		} else {
+			workspaceService.Upload(fileUser.Userid, document.ID)
 		}
 	}
+	// 处理哪些用户需要将文件移除
+	for _, userid := range permissionDeniedUser {
+		if userid == file.Userid {
+			continue
+		}
+		workspaceService.RemoveDocument(userid, document.ID)
+	}
+	// 文件所有者上传
+	workspaceService.Upload(file.Userid, document.ID)
 }
 
 // TravelsalFileUser 遍历文件用户，进行更新

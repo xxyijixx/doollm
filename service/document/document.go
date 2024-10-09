@@ -18,14 +18,7 @@ type DocumentService interface{}
 type DocumentServiceImpl struct {
 }
 
-func (d *DocumentServiceImpl) UploadAndSave() {
-
-}
-
-func (d *DocumentServiceImpl) UploadAndRemove() {
-
-}
-
+// Remove 移除文档信息和工作区的文档记录，llm工作区文档会在文档移除后自动清除
 func (d *DocumentServiceImpl) Remove(documentId int64) {
 
 	ctx := context.Background()
@@ -51,10 +44,12 @@ func (d *DocumentServiceImpl) Remove(documentId int64) {
 
 // RemoveAndUpdateWorkspace
 func (d *DocumentServiceImpl) RemoveAndUpdateWorkspace(documentId int64, newLocation, oldLocation string) error {
+	// 移除旧文档
 	anythingllmClient.RemoveDocument(system.RemoveDocumentParams{
 		Names: []string{oldLocation},
 	})
 
+	// 查找需要更新的工作区文档
 	workspaceDocuments, err := repo.LlmWorkspaceDocument.WithContext(context.Background()).
 		Where(repo.LlmWorkspaceDocument.DocumentID.Eq(documentId)).
 		Find()
@@ -65,6 +60,7 @@ func (d *DocumentServiceImpl) RemoveAndUpdateWorkspace(documentId int64, newLoca
 		return err
 	}
 
+	// 更新工作区文档信息
 	for _, workDocument := range workspaceDocuments {
 		anythingllmClient.UpdateEmbeddings(workDocument.WorkspaceSlug, workspace.UpdateEmbeddingsParams{
 			Adds: []string{newLocation},
