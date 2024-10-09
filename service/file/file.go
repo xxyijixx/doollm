@@ -38,7 +38,8 @@ type FileService interface {
 	Traversal()
 	UploadWorkspace()
 	Update()
-	TravelsalFileUser()
+	UpdateByFileUser()
+	ClearNotExistFile()
 	Delete()
 }
 
@@ -111,7 +112,9 @@ func (f *FileServiceImpl) Traversal() {
 	// 更新工作区
 	f.UploadWorkspace()
 	// 检测用户权限变化
-	f.TravelsalFileUser()
+	f.UpdateByFileUser()
+	// 清除不存在文件
+	f.ClearNotExistFile()
 
 	log.Infof("End of file processing")
 }
@@ -236,8 +239,8 @@ func updateFile(ctx context.Context, file *model.File, permissionDeniedUser []in
 	workspaceService.Upload(file.Userid, document.ID)
 }
 
-// TravelsalFileUser 遍历文件用户，进行更新
-func (f *FileServiceImpl) TravelsalFileUser() {
+// UpdateByFileUser 更新工作区，根据文件共享情况进行更新
+func (f *FileServiceImpl) UpdateByFileUser() {
 	log.Debugf("processing user share ...")
 	fileUsers, err := repo.FileUser.WithContext(context.Background()).Distinct(repo.FileUser.FileID).Find()
 	if err != nil {
@@ -245,6 +248,42 @@ func (f *FileServiceImpl) TravelsalFileUser() {
 	}
 	for _, fileUser := range fileUsers {
 		f.Update(fileUser.FileID)
+	}
+}
+
+// ClearNotExistFile 清除文件不存在的文档信息
+func (f *FileServiceImpl) ClearNotExistFile() {
+	log.Info("")
+	ctx := context.Background()
+	// 文件类型限制
+	conditions := []string{
+		FileTypePDF,
+		FileTypeDoc,
+		FileTypeTxt,
+		FileTypeWord,
+		FileTypePPT}
+
+	files, err := repo.File.WithContext(ctx).Where(repo.File.Type.In(conditions...)).Find()
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return
+	}
+
+	documents, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.FILE)).Find()
+	if err != nil {
+		return
+	}
+
+	fileIdsMap := make(map[int64]struct{})
+	for _, file := range files {
+		fileIdsMap[file.ID] = struct{}{}
+	}
+
+	for _, document := range documents {
+		if _, exist := fileIdsMap[document.LinkId]; !exist {
+			log.Debugf("文档[#%d]对应的文件[#%d]不存在，移除文档", document.ID, document.LinkId)
+			// 在文档信息中找不到对应的文件ID
+			documentService.Remove(document.ID)
+		}
 	}
 }
 
@@ -376,7 +415,8 @@ func handleFileAuth(fileId int64) {
 		log.Debugf("Error query file %v", err)
 		return
 	}
-	workspaceList, err := repo.LlmWorkspace.WithContext(ctx).Find()
+	// 获取工作区列表
+	workspaceList, _, err := workspaceService.GetWorkspaceUser()
 	if err != nil {
 		log.Debugf("Error query workspace %v", err)
 		return
@@ -385,13 +425,15 @@ func handleFileAuth(fileId int64) {
 	for i, work := range workspaceList {
 		workspaceUserIds[i] = work.Userid
 	}
+	document, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.FILE),
+		repo.LlmDocument.LinkId.Eq(file.ID)).First()
+	if err != nil {
+		log.Debugf("Error query document %v", err)
+		return
+	}
 	if file.Pid == 0 {
+
 		fileUsers, err := repo.FileUser.WithContext(ctx).Order(repo.FileUser.Userid.Asc()).Find()
-		document, err2 := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(file.ID)).First()
-		if err2 != nil {
-			log.Debugf("Error query document %v", err)
-			return
-		}
 		if err != nil {
 			if err != gorm.ErrRecordNotFound {
 				return
@@ -413,17 +455,12 @@ func handleFileAuth(fileId int64) {
 	} else {
 		// 对于非位于顶级目录的文件
 		shareUserIds := getFileShareUsers(file, workspaceUserIds)
-		document, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(file.ID)).First()
-		if err != nil {
-			return
-		}
 		log.Debugf("文件[#%v]共享用户：%v", file.ID, shareUserIds)
 		for _, userid := range shareUserIds {
 			workspaceService.Upload(userid, document.ID)
 		}
-		workspaceService.Upload(file.Userid, document.ID)
 	}
-
+	workspaceService.Upload(file.Userid, document.ID)
 }
 
 // getFileShareUsers 获取文件可见用户列表

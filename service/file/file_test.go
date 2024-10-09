@@ -14,6 +14,6 @@ func TestUpdate(t *testing.T) {
 	fileService.Update(32)
 }
 
-func TestTravelsalFileUser(t *testing.T) {
-	fileService.TravelsalFileUser()
+func TestUpdateByFileUser(t *testing.T) {
+	fileService.UpdateByFileUser()
 }
