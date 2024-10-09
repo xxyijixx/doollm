@@ -77,10 +77,18 @@ func (t *TaskServiceImpl) UploadWorkspace() {
 		if err := json.Unmarshal([]byte(document.LinkExtras), &extras); err != nil {
 			continue
 		}
-		for _, owner := range extras.Owner {
-			workspaceService.Upload(owner, document.ID)
+		missingFromTasks, missingFromExtras, extras, err := compareTaskAndExtraOwners(ctx, document)
+		if err != nil {
+			continue
 		}
-
+		// 从用户工作区移除
+		for _, id := range missingFromTasks {
+			workspaceService.RemoveDocument(id, document.ID)
+		}
+		// 添加到用户工作区
+		for _, id := range missingFromExtras {
+			workspaceService.Upload(id, document.ID)
+		}
 	}
 }
 
@@ -296,6 +304,7 @@ func (h *ProjectTaskHandle) HandleTask() {
 		h.rowTask.Status = strings.ReplaceAll(h.task.FlowItemName, "|", "\\|")
 	}
 	h.FindProjectUser()
+	h.extras.SubTask = make([]SubTaskExtras, 0)
 	subTasks, err := repo.ProjectTask.WithContext(h.ctx).Where(repo.ProjectTask.ParentID.Eq(h.task.ID)).Find()
 	if err != nil {
 		log.Printf("Error query sub task: %v", err)
@@ -305,7 +314,6 @@ func (h *ProjectTaskHandle) HandleTask() {
 	completeNum := 0
 	subTaskRowText := make([]SubTaskRowText, len(subTasks))
 
-	h.extras.SubTask = make([]SubTaskExtras, 0)
 	for i, subTask := range subTasks {
 		if !subTask.CompleteAt.IsZero() {
 			completeNum += 1
