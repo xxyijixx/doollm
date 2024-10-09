@@ -1,7 +1,5 @@
 package model
 
-import "time"
-
 type SetPermissionRequest struct {
 	UserID   int  `json:"user_id"`
 	IsCreate bool `json:"is_create"`
@@ -12,14 +10,14 @@ type APIResponse struct {
 	Success bool   `json:"success"`
 }
 
-type WorkspacePermission struct {
-	ID          int64     `json:"id"`
-	UserID      int64     `json:"user_id"`
-	IsCreate    bool      `json:"is_create"`
-	WorkspaceID string    `json:"workspace_id"`
-	CreateTime  time.Time `json:"create_time"`
-	UpdateTime  time.Time `json:"update_time"`
-}
+// type WorkspacePermission struct {
+// 	ID          int64     `json:"id"`
+// 	UserID      int64     `json:"user_id"`
+// 	IsCreate    bool      `json:"is_create"`
+// 	WorkspaceID string    `json:"workspace_id"`
+// 	CreateTime  time.Time `json:"create_time"`
+// 	UpdateTime  time.Time `json:"update_time"`
+// }
 
 type CreateWorkspaceRequest struct {
 	UserID int `json:"user_id"`
@@ -50,13 +48,13 @@ type ChatMessage struct {
 	Content string `json:"content"`
 }
 
-type HistoryChat struct {
-	ID           int64  `json:"id"`
-	SessionID    string `json:"session_id"`
-	Model        string `json:"model"`
-	UserID       string `json:"user_id"`
-	LastMessages string `json:"last_messages"`
-	CreateTime   string `json:"create_time"`
-	UpdateTime   string `json:"update_time"`
-	Avatar       string `json:"avatar"`
-}
+// type HistoryChat struct {
+// 	ID           int64  `json:"id"`
+// 	SessionID    string `json:"session_id"`
+// 	Model        string `json:"model"`
+// 	UserID       string `json:"user_id"`
+// 	LastMessages string `json:"last_messages"`
+// 	CreateTime   string `json:"create_time"`
+// 	UpdateTime   string `json:"update_time"`
+// 	Avatar       string `json:"avatar"`
+// }

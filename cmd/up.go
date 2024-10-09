@@ -4,7 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"doollm/config"
 	"doollm/server"
 
 	"github.com/spf13/cobra"
@@ -20,7 +19,6 @@ var (
 
 func init() {
 
-	rootCmd.Flags().IntVar(&config.Port, "port", 8080, "server port")
 }
 
 func upFunc(cmd *cobra.Command, args []string) {

@@ -5,6 +5,7 @@ import (
 	"doollm/internal/model"
 	"doollm/internal/repository"
 	"doollm/pkg/settime"
+	dbModel "doollm/repo/model"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -44,35 +45,35 @@ func FetchChatHistory(workspaceSlug, threadSlug string) ([]model.ChatMessage, er
 }
 
 // 更新最后一条消息并返回所有字段
-func UpdateLastMessage(sessionID, lastMessage string) (model.HistoryChat, error) {
+func UpdateLastMessage(sessionID, lastMessage string) (dbModel.HistoryChat, error) {
 	currentTime := settime.GetCurrentFormattedTime()
 	query := `UPDATE pre_history_aichats SET last_messages = ?, update_time = ? WHERE session_id = ?`
 	_, err := repository.DB.Exec(query, lastMessage, currentTime, sessionID)
 	if err != nil {
 		log.Printf("Error updating last message for session_id %s: %v", sessionID, err)
-		return model.HistoryChat{}, fmt.Errorf("error updating last message: %v", err)
+		return dbModel.HistoryChat{}, fmt.Errorf("error updating last message: %v", err)
 	}
 
 	return GetHistoryChat(sessionID)
 }
 
 // 根据 sessionID 获取记录
-func GetHistoryChat(sessionID string) (model.HistoryChat, error) {
-	var chat model.HistoryChat
+func GetHistoryChat(sessionID string) (dbModel.HistoryChat, error) {
+	var chat dbModel.HistoryChat
 	query := `SELECT id, session_id, model, user_id, last_messages, create_time, update_time, avatar FROM pre_history_aichats WHERE session_id = ?`
 	err := repository.DB.QueryRow(query, sessionID).Scan(&chat.ID, &chat.SessionID, &chat.Model, &chat.UserID, &chat.LastMessages, &chat.CreateTime, &chat.UpdateTime, &chat.Avatar)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return model.HistoryChat{}, fmt.Errorf("no record found: %v", err)
+			return dbModel.HistoryChat{}, fmt.Errorf("no record found: %v", err)
 		}
-		return model.HistoryChat{}, fmt.Errorf("error fetching record: %v", err)
+		return dbModel.HistoryChat{}, fmt.Errorf("error fetching record: %v", err)
 	}
 	return chat, nil
 }
 
 // 根据用户 ID 获取所有对话窗口的最后一条记录, 并按照更新时间降序排列
-func FetchChatsByUserID(userID int) ([]model.HistoryChat, error) {
-	var chats []model.HistoryChat
+func FetchChatsByUserID(userID int) ([]dbModel.HistoryChat, error) {
+	var chats []dbModel.HistoryChat
 	query := `
 			SELECT id, session_id, model, user_id, last_messages, create_time, update_time, avatar
 			FROM pre_history_aichats WHERE user_id = ?
@@ -85,7 +86,7 @@ func FetchChatsByUserID(userID int) ([]model.HistoryChat, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var chat model.HistoryChat
+		var chat dbModel.HistoryChat
 		if err := rows.Scan(&chat.ID, &chat.SessionID, &chat.Model, &chat.UserID, &chat.LastMessages, &chat.CreateTime, &chat.UpdateTime, &chat.Avatar); err != nil {
 			return nil, fmt.Errorf("error scanning chat: %v", err)
 		}

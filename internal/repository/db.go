@@ -2,8 +2,7 @@ package repository
 
 import (
 	"database/sql"
-	"doollm/pkg/config"
-	"fmt"
+	"doollm/config"
 	"log"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -11,10 +10,9 @@ import (
 
 var DB *sql.DB
 
-func InitDB(cfg *config.DatabaseConfig) {
+func InitDB() {
 	var err error
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=True",
-		cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.DBName)
+	dsn := config.EnvConfig.GetDSN()
 	DB, err = sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("Error opening database: %v", err)

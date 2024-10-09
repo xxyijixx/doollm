@@ -20,6 +20,7 @@ var (
 	File                      *file
 	FileContent               *fileContent
 	FileUser                  *fileUser
+	HistoryChat               *historyChat
 	LlmDocument               *llmDocument
 	LlmWorkspace              *llmWorkspace
 	LlmWorkspaceDocument      *llmWorkspaceDocument
@@ -36,6 +37,7 @@ var (
 	Report                    *report
 	ReportReceive             *reportReceive
 	User                      *user
+	WorkspacePermission       *workspacePermission
 )
 
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
@@ -43,6 +45,7 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	File = &Q.File
 	FileContent = &Q.FileContent
 	FileUser = &Q.FileUser
+	HistoryChat = &Q.HistoryChat
 	LlmDocument = &Q.LlmDocument
 	LlmWorkspace = &Q.LlmWorkspace
 	LlmWorkspaceDocument = &Q.LlmWorkspaceDocument
@@ -59,6 +62,7 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	Report = &Q.Report
 	ReportReceive = &Q.ReportReceive
 	User = &Q.User
+	WorkspacePermission = &Q.WorkspacePermission
 }
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
@@ -67,6 +71,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		File:                      newFile(db, opts...),
 		FileContent:               newFileContent(db, opts...),
 		FileUser:                  newFileUser(db, opts...),
+		HistoryChat:               newHistoryChat(db, opts...),
 		LlmDocument:               newLlmDocument(db, opts...),
 		LlmWorkspace:              newLlmWorkspace(db, opts...),
 		LlmWorkspaceDocument:      newLlmWorkspaceDocument(db, opts...),
@@ -83,6 +88,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		Report:                    newReport(db, opts...),
 		ReportReceive:             newReportReceive(db, opts...),
 		User:                      newUser(db, opts...),
+		WorkspacePermission:       newWorkspacePermission(db, opts...),
 	}
 }
 
@@ -92,6 +98,7 @@ type Query struct {
 	File                      file
 	FileContent               fileContent
 	FileUser                  fileUser
+	HistoryChat               historyChat
 	LlmDocument               llmDocument
 	LlmWorkspace              llmWorkspace
 	LlmWorkspaceDocument      llmWorkspaceDocument
@@ -108,6 +115,7 @@ type Query struct {
 	Report                    report
 	ReportReceive             reportReceive
 	User                      user
+	WorkspacePermission       workspacePermission
 }
 
 func (q *Query) Available() bool { return q.db != nil }
@@ -118,6 +126,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		File:                      q.File.clone(db),
 		FileContent:               q.FileContent.clone(db),
 		FileUser:                  q.FileUser.clone(db),
+		HistoryChat:               q.HistoryChat.clone(db),
 		LlmDocument:               q.LlmDocument.clone(db),
 		LlmWorkspace:              q.LlmWorkspace.clone(db),
 		LlmWorkspaceDocument:      q.LlmWorkspaceDocument.clone(db),
@@ -134,6 +143,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		Report:                    q.Report.clone(db),
 		ReportReceive:             q.ReportReceive.clone(db),
 		User:                      q.User.clone(db),
+		WorkspacePermission:       q.WorkspacePermission.clone(db),
 	}
 }
 
@@ -151,6 +161,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		File:                      q.File.replaceDB(db),
 		FileContent:               q.FileContent.replaceDB(db),
 		FileUser:                  q.FileUser.replaceDB(db),
+		HistoryChat:               q.HistoryChat.replaceDB(db),
 		LlmDocument:               q.LlmDocument.replaceDB(db),
 		LlmWorkspace:              q.LlmWorkspace.replaceDB(db),
 		LlmWorkspaceDocument:      q.LlmWorkspaceDocument.replaceDB(db),
@@ -167,6 +178,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		Report:                    q.Report.replaceDB(db),
 		ReportReceive:             q.ReportReceive.replaceDB(db),
 		User:                      q.User.replaceDB(db),
+		WorkspacePermission:       q.WorkspacePermission.replaceDB(db),
 	}
 }
 
@@ -174,6 +186,7 @@ type queryCtx struct {
 	File                      IFileDo
 	FileContent               IFileContentDo
 	FileUser                  IFileUserDo
+	HistoryChat               IHistoryChatDo
 	LlmDocument               ILlmDocumentDo
 	LlmWorkspace              ILlmWorkspaceDo
 	LlmWorkspaceDocument      ILlmWorkspaceDocumentDo
@@ -190,6 +203,7 @@ type queryCtx struct {
 	Report                    IReportDo
 	ReportReceive             IReportReceiveDo
 	User                      IUserDo
+	WorkspacePermission       IWorkspacePermissionDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
@@ -197,6 +211,7 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		File:                      q.File.WithContext(ctx),
 		FileContent:               q.FileContent.WithContext(ctx),
 		FileUser:                  q.FileUser.WithContext(ctx),
+		HistoryChat:               q.HistoryChat.WithContext(ctx),
 		LlmDocument:               q.LlmDocument.WithContext(ctx),
 		LlmWorkspace:              q.LlmWorkspace.WithContext(ctx),
 		LlmWorkspaceDocument:      q.LlmWorkspaceDocument.WithContext(ctx),
@@ -213,6 +228,7 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		Report:                    q.Report.WithContext(ctx),
 		ReportReceive:             q.ReportReceive.WithContext(ctx),
 		User:                      q.User.WithContext(ctx),
+		WorkspacePermission:       q.WorkspacePermission.WithContext(ctx),
 	}
 }
 

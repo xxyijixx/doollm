@@ -258,6 +258,7 @@ func handleUpdateLastChat(w http.ResponseWriter, r *http.Request) {
 
 // 获取对话列表路由
 func handleGetChatList(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
 	if r.Method != "POST" {
 		JsonResponse(w, map[string]string{"error": "Only POST method is allowed"}, http.StatusMethodNotAllowed)
 		return

@@ -30,7 +30,7 @@ var defaultConfig = envConfigSchema{
 	ENV: "dev",
 
 	MYSQL_HOST:     "127.0.0.1",
-	MYSQL_PORT:     "49815",
+	MYSQL_PORT:     "49716",
 	MYSQL_USERNAME: "dootask",
 	MYSQL_PASSWORD: "123456",
 	MYSQL_DB_NAME:  "dootask",
@@ -40,6 +40,8 @@ var defaultConfig = envConfigSchema{
 	// MYSQL_PASSWORD:        "123456",
 	// MYSQL_DB_NAME:         "devlop",
 	MAX_REQUEST_BODY_SIZE: 200 * 1024 * 1024,
+
+	PORT: 5500,
 
 	PUBLIC_PATH: "/Users/mac-47/Desktop/zeniein/devlop/dootask/public",
 
@@ -57,6 +59,8 @@ type envConfigSchema struct {
 	MYSQL_DB_NAME  string
 
 	MAX_REQUEST_BODY_SIZE int
+
+	PORT int
 
 	PUBLIC_PATH string
 
