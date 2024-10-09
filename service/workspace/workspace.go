@@ -34,6 +34,21 @@ func (w *WorkspaceServiceImpl) Verify(userid int64) bool {
 	return false
 }
 
+// GetWorkspaceUser 获取工作区用户
+// 返回工作区用户列表和一个key为userid 值为工作区信息的Map
+func (w *WorkspaceServiceImpl) GetWorkspaceUser() ([]*model.LlmWorkspace, map[int64]*model.LlmWorkspace, error) {
+	ctx := context.Background()
+	userWorkspaces, err := repo.LlmWorkspace.WithContext(ctx).Find()
+	if err != nil {
+		return nil, nil, err
+	}
+	userWorkspaceMapByUserid := make(map[int64]*model.LlmWorkspace)
+	for _, userWorkspace := range userWorkspaces {
+		userWorkspaceMapByUserid[userWorkspace.Userid] = userWorkspace
+	}
+	return userWorkspaces, userWorkspaceMapByUserid, nil
+}
+
 func (w *WorkspaceServiceImpl) Upload(userid int64, documentId int64) error {
 	log.Debugf("正在上传 userid=%d, documentId=%d", userid, documentId)
 	var err error

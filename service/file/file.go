@@ -152,18 +152,11 @@ func (f *FileServiceImpl) Update(fileId int64) {
 		}
 		return
 	}
-	// 处理拥有工作区的用户
-	workspaceList, err := repo.LlmWorkspace.WithContext(ctx).Find()
+	// 获取工作区用户
+	workspaceList, userWorkspaceMap, err := workspaceService.GetWorkspaceUser()
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			log.Debugf("当前没有用户拥有工作区")
-		}
+		log.Infof("Error query user workspace: %v", err)
 		return
-	}
-	// 构建工作区用户Map
-	userWorkspaceMap := make(map[int64]*model.LlmWorkspace)
-	for _, userWorkspace := range workspaceList {
-		userWorkspaceMap[userWorkspace.Userid] = userWorkspace
 	}
 
 	// 查找文件可见用户，按用户ID进行升序排序，userid为0表示所有人
@@ -255,6 +248,7 @@ func (f *FileServiceImpl) TravelsalFileUser() {
 	}
 }
 
+// GetAllFile 获取文件的所有子文件
 func GetAllFile(ctx context.Context, fileId int64, fileListPtr *[]*model.File) {
 	fileList := *fileListPtr
 
@@ -272,6 +266,7 @@ func GetAllFile(ctx context.Context, fileId int64, fileListPtr *[]*model.File) {
 	}
 }
 
+// verifyFile 验证文件是否符合上传规则
 func verifyFile(file *model.File, fileContent *model.FileContent) bool {
 	switch file.Type {
 	case FileTypePPT:
@@ -297,6 +292,7 @@ func isSupport(file *model.File) bool {
 	}
 }
 
+// verifyTxtFile 验证txt文件是否符合上传规则，文件字符长度不能超过10万字符
 func VerifyTxtFile(fileContent *model.FileContent) bool {
 	var content Content
 	err := json.Unmarshal([]byte(fileContent.Content), &content)
@@ -430,6 +426,7 @@ func handleFileAuth(fileId int64) {
 
 }
 
+// getFileShareUsers 获取文件可见用户列表
 func getFileShareUsers(file *model.File, workspaceUserIds []int64) []int64 {
 	pids := file.Pids
 	parts := strings.Split(strings.Trim(pids, ","), ",")
