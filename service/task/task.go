@@ -42,8 +42,10 @@ type ProjectTaskHandle struct {
 	attachment       []*model.ProjectTaskFile
 }
 
+// Traversal 遍历全部项目，将所有任务进行上传
 func (t *TaskServiceImpl) Traversal() {
 	ctx := context.Background()
+	// 查找所有项目
 	proojects, err := repo.Project.WithContext(ctx).Find()
 	if err != nil {
 		return
@@ -219,9 +221,9 @@ func compareTaskAndExtraOwners(ctx context.Context, document *model.LlmDocument)
 // handleProject 处理项目
 func handleProject(ctx context.Context, project *model.Project, userMap *map[int64]*model.User) {
 	var err error
+	// 查找项目中所有列
 	projectColumns, err := repo.ProjectColumn.WithContext(ctx).Where(repo.ProjectColumn.ProjectID).Find()
 	if err != nil {
-		// 处理错误，比如记录日志或返回错误
 		log.Printf("Error querying project columns: %v", err)
 		return
 	}
@@ -229,6 +231,7 @@ func handleProject(ctx context.Context, project *model.Project, userMap *map[int
 	for _, projectColumn := range projectColumns {
 		projectColumnMap[projectColumn.ID] = projectColumn
 	}
+
 	// 处理工作流
 	projectFlow, err := repo.ProjectFlow.WithContext(ctx).Where(repo.ProjectFlow.ProjectID.Eq(project.ID)).First()
 	if err != nil && err != gorm.ErrRecordNotFound {
@@ -236,10 +239,10 @@ func handleProject(ctx context.Context, project *model.Project, userMap *map[int
 	}
 	var flowItems []*model.ProjectFlowItem
 	flowItemMap := make(map[int64]*model.ProjectFlowItem)
+
 	if projectFlow != nil {
 		flowItems, err = repo.ProjectFlowItem.WithContext(ctx).Where(repo.ProjectFlowItem.FlowID.Eq(projectFlow.ID)).Find()
 		if err != nil {
-			// 处理错误，比如记录日志或返回错误
 			log.Printf("Error querying project flow items: %v", err)
 		}
 
@@ -270,7 +273,7 @@ func handleProject(ctx context.Context, project *model.Project, userMap *map[int
 
 }
 
-// HandleTask 处理任务
+// HandleTask 处理项目任务
 func (h *ProjectTaskHandle) HandleTask() {
 
 	// 附件处理
@@ -293,16 +296,7 @@ func (h *ProjectTaskHandle) HandleTask() {
 	h.rowTask.TaskOwner = FindTaskUser(h.task.ID, h.userMap, true)
 	h.rowTask.TaskAssistant = FindTaskUser(h.task.ID, h.userMap, false)
 	h.rowTask.CompleteAt = h.task.CompleteAt
-	if h.task.FlowItemID == 0 {
-		h.rowTask.Status = func(date time.Time) string {
-			if date.IsZero() {
-				return "未完成"
-			}
-			return "已完成"
-		}(h.task.CompleteAt)
-	} else {
-		h.rowTask.Status = strings.ReplaceAll(h.task.FlowItemName, "|", "\\|")
-	}
+	h.rowTask.Status = handleTaskStatus(h.task)
 	h.FindProjectUser()
 	h.extras.SubTask = make([]SubTaskExtras, 0)
 	subTasks, err := repo.ProjectTask.WithContext(h.ctx).Where(repo.ProjectTask.ParentID.Eq(h.task.ID)).Find()
@@ -332,16 +326,7 @@ func (h *ProjectTaskHandle) HandleSubTask(subTaskRowText *SubTaskRowText, subTas
 	subTaskRowText.StartAt = subTask.StartAt
 	subTaskRowText.EndAt = subTask.EndAt
 	subTaskRowText.CompleteAt = subTask.CompleteAt
-	if subTask.FlowItemID == 0 {
-		subTaskRowText.Status = func(date time.Time) string {
-			if date.IsZero() {
-				return "未完成"
-			}
-			return "已完成"
-		}(h.task.CompleteAt)
-	} else {
-		subTaskRowText.Status = strings.ReplaceAll(subTask.FlowItemName, "|", "\\|")
-	}
+	subTaskRowText.Status = handleTaskStatus(subTask)
 
 	// 记录子任务的额外保存信息
 	h.extras.SubTask = append(h.extras.SubTask, SubTaskExtras{
@@ -363,6 +348,23 @@ func (h *ProjectTaskHandle) HandleTaskAttachment() {
 	for i, file := range files {
 		h.rowTask.Attachment[i] = file.Name
 	}
+}
+
+// handleTaskStatus 处理任务的状态
+func handleTaskStatus(task *model.ProjectTask) string {
+	if task.FlowItemID == 0 {
+		if task.CompleteAt.IsZero() {
+			return "未完成"
+		}
+		return "已完成"
+	}
+
+	flowItemNames := strings.Split(task.FlowItemName, "|")
+	if len(flowItemNames) > 0 {
+		return flowItemNames[0]
+	}
+
+	return strings.ReplaceAll(task.FlowItemName, "|", "\\|")
 }
 
 // compareTaskExtras
@@ -475,25 +477,26 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 // FindProjectUser 查找项目成员
 func (h *ProjectTaskHandle) FindProjectUser() {
 	projectId := h.project.ID
-	projectUsers, err := repo.ProjectUser.WithContext(context.Background()).Where(repo.ProjectUser.ProjectID.Eq(projectId)).Find()
+	projectUsers, err := repo.ProjectUser.WithContext(h.ctx).Where(repo.ProjectUser.ProjectID.Eq(projectId)).Find()
 	if err != nil {
 		log.Printf("Error query project user: %v", err)
 		return
 	}
 	projectOwnerIds := make([]int64, 0)
-	projectUserIds := make([]int64, 0)
-	for _, projectUser := range projectUsers {
+	projectUserIds := make([]int64, len(projectUsers))
+	// 获取项目负责人和项目成员ID
+	for i, projectUser := range projectUsers {
 		if projectUser.Owner == 1 {
 			projectOwnerIds = append(projectOwnerIds, projectUser.Userid)
 		}
-		projectUserIds = append(projectUserIds, projectUser.Userid)
-
+		projectUserIds[i] = projectUser.Userid
 	}
 
+	// 获取成员名称
 	h.rowTask.ProjectOwner = GetUserNames(projectOwnerIds, h.userMap)
 	h.rowTask.ProjectUser = GetUserNames(projectUserIds, h.userMap)
 
-	taskUsers, err := repo.ProjectTaskUser.WithContext(context.Background()).Where(repo.ProjectTaskUser.TaskID.Eq(h.task.ID), repo.ProjectTaskUser.Owner.Eq(1)).Find()
+	taskUsers, err := repo.ProjectTaskUser.WithContext(h.ctx).Where(repo.ProjectTaskUser.TaskID.Eq(h.task.ID), repo.ProjectTaskUser.Owner.Eq(1)).Find()
 	if err != nil {
 		return
 	}
