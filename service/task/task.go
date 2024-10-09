@@ -79,16 +79,17 @@ func (t *TaskServiceImpl) UploadWorkspace() {
 		if err := json.Unmarshal([]byte(document.LinkExtras), &extras); err != nil {
 			continue
 		}
-		missingFromTasks, missingFromExtras, extras, err := compareTaskAndExtraOwners(ctx, document)
+		missingFromTasks, _, extras, err := compareTaskAndExtraOwners(ctx, document)
 		if err != nil {
 			continue
 		}
+		log.Infof("需要将文档[#%d]移除的用户: %+v", document.ID, missingFromTasks)
 		// 从用户工作区移除
 		for _, id := range missingFromTasks {
 			workspaceService.RemoveDocument(id, document.ID)
 		}
 		// 添加到用户工作区
-		for _, id := range missingFromExtras {
+		for _, id := range extras.Owner {
 			workspaceService.Upload(id, document.ID)
 		}
 	}
@@ -440,13 +441,13 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 		log.Printf("Error query document %v", err)
 		return err
 	}
-	if document != nil && document.LastModifiedAt.Equal(h.task.UpdatedAt) {
-		log.Debugf("Task[#%d]内容没有更新", h.task.ID)
-		if compareTaskExtras(*h.extras, document.LinkExtras) {
-			log.Debugf("Task[#%d]附加信息没有变更", h.task.ID)
-			return nil
-		}
-	}
+	// if document != nil && document.LastModifiedAt.Equal(h.task.UpdatedAt) {
+	// 	log.Debugf("Task[#%d]内容没有更新", h.task.ID)
+	// 	if compareTaskExtras(*h.extras, document.LinkExtras) {
+	// 		log.Debugf("Task[#%d]附加信息没有变更", h.task.ID)
+	// 		return nil
+	// 	}
+	// }
 
 	fileName := fmt.Sprintf("task-%d-%d-%d", h.project.ID, h.task.ID, time.Now().Unix())
 	res, err := anythingllmClient.UploadFileFormString(generateMarkdown(*h.rowTask), fileName, "md")
@@ -611,7 +612,7 @@ func generateMarkdown(task TaskRowText) string {
 	if len(task.Attachment) > 0 {
 		sb.WriteString("\n## 附件\n\n")
 		for i, attachment := range task.Attachment {
-			sb.WriteString(fmt.Sprintf("%d. %s \n", i+1, attachment))
+			sb.WriteString(fmt.Sprintf("- 附件%d %s \n", i+1, attachment))
 		}
 	}
 
