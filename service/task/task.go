@@ -258,13 +258,19 @@ func handleProject(ctx context.Context, project *model.Project, userMap *map[int
 		log.Printf("Error querying project task: %v", err)
 		return
 	}
+
+	projectOwner, projectUser := getProjectUser(project.ID, userMap)
 	// 处理项目下的任务
 	for _, projectTask := range projectTasks {
 		projectTaskHandle := &ProjectTaskHandle{
-			ctx:              context.Background(),
-			project:          project,
-			task:             projectTask,
-			rowTask:          &TaskRowText{},
+			ctx:     context.Background(),
+			project: project,
+			task:    projectTask,
+			extras:  &TaskDocumentExtras{},
+			rowTask: &TaskRowText{
+				ProjectOwner: projectOwner,
+				ProjectUser:  projectUser,
+			},
 			userMap:          userMap,
 			projectColumnMap: &projectColumnMap,
 		}
@@ -273,31 +279,51 @@ func handleProject(ctx context.Context, project *model.Project, userMap *map[int
 
 }
 
+// getProjectUser 获取项目用户的名称
+func getProjectUser(projectId int64, userMap *map[int64]*model.User) (projectOwner, projectUser string) {
+	ctx := context.Background()
+	projectUsers, err := repo.ProjectUser.WithContext(ctx).Where(repo.ProjectUser.ProjectID.Eq(projectId)).Find()
+	if err != nil {
+		log.Printf("Error query project user: %v", err)
+		return
+	}
+	projectOwnerIds := make([]int64, 0)
+	projectUserIds := make([]int64, len(projectUsers))
+	// 获取项目负责人和项目成员ID
+	for i, projectUser := range projectUsers {
+		if projectUser.Owner == 1 {
+			projectOwnerIds = append(projectOwnerIds, projectUser.Userid)
+		}
+		projectUserIds[i] = projectUser.Userid
+	}
+
+	// 获取成员名称
+	projectOwner = GetUserNames(projectOwnerIds, userMap)
+	projectUser = GetUserNames(projectUserIds, userMap)
+	return
+}
+
 // HandleTask 处理项目任务
 func (h *ProjectTaskHandle) HandleTask() {
 
 	// 附件处理
 	h.HandleTaskAttachment()
-
-	// 额外的内容
-	h.extras = &TaskDocumentExtras{}
-
 	projectColumnMap := *h.projectColumnMap
 	h.rowTask.ProjectName = h.project.Name
 	column, exist := projectColumnMap[h.task.ColumnID]
 	if exist {
 		h.rowTask.ColumnName = column.Name
 	}
+	h.findTaskOwner()
 	h.rowTask.Priority = h.task.PName
 	h.rowTask.StartAt = h.task.StartAt
 	h.rowTask.EndAt = h.task.EndAt
 	h.rowTask.TaskName = h.task.Name
 	h.rowTask.TaskDescription = h.task.Desc
-	h.rowTask.TaskOwner = FindTaskUser(h.task.ID, h.userMap, true)
-	h.rowTask.TaskAssistant = FindTaskUser(h.task.ID, h.userMap, false)
+	h.rowTask.TaskAssistant = findTaskUser(h.task.ID, h.userMap, false)
 	h.rowTask.CompleteAt = h.task.CompleteAt
 	h.rowTask.Status = handleTaskStatus(h.task)
-	h.FindProjectUser()
+
 	h.extras.SubTask = make([]SubTaskExtras, 0)
 	subTasks, err := repo.ProjectTask.WithContext(h.ctx).Where(repo.ProjectTask.ParentID.Eq(h.task.ID)).Find()
 	if err != nil {
@@ -322,7 +348,7 @@ func (h *ProjectTaskHandle) HandleTask() {
 // handleSubTask 处理子任务
 func (h *ProjectTaskHandle) HandleSubTask(subTaskRowText *SubTaskRowText, subTask *model.ProjectTask) {
 	subTaskRowText.Name = subTask.Name
-	subTaskRowText.Owner = FindTaskUser(subTask.ID, h.userMap, true)
+	subTaskRowText.Owner = findTaskUser(subTask.ID, h.userMap, true)
 	subTaskRowText.StartAt = subTask.StartAt
 	subTaskRowText.EndAt = subTask.EndAt
 	subTaskRowText.CompleteAt = subTask.CompleteAt
@@ -474,28 +500,8 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 
 }
 
-// FindProjectUser 查找项目成员
-func (h *ProjectTaskHandle) FindProjectUser() {
-	projectId := h.project.ID
-	projectUsers, err := repo.ProjectUser.WithContext(h.ctx).Where(repo.ProjectUser.ProjectID.Eq(projectId)).Find()
-	if err != nil {
-		log.Printf("Error query project user: %v", err)
-		return
-	}
-	projectOwnerIds := make([]int64, 0)
-	projectUserIds := make([]int64, len(projectUsers))
-	// 获取项目负责人和项目成员ID
-	for i, projectUser := range projectUsers {
-		if projectUser.Owner == 1 {
-			projectOwnerIds = append(projectOwnerIds, projectUser.Userid)
-		}
-		projectUserIds[i] = projectUser.Userid
-	}
-
-	// 获取成员名称
-	h.rowTask.ProjectOwner = GetUserNames(projectOwnerIds, h.userMap)
-	h.rowTask.ProjectUser = GetUserNames(projectUserIds, h.userMap)
-
+// findTaskOwner 查找任务负责人
+func (h *ProjectTaskHandle) findTaskOwner() {
 	taskUsers, err := repo.ProjectTaskUser.WithContext(h.ctx).Where(repo.ProjectTaskUser.TaskID.Eq(h.task.ID), repo.ProjectTaskUser.Owner.Eq(1)).Find()
 	if err != nil {
 		return
@@ -508,8 +514,8 @@ func (h *ProjectTaskHandle) FindProjectUser() {
 	h.extras.Owner = taskOwnerIds
 }
 
-// FindTaskUser 查找任务成员，包含负责人或协助人员
-func FindTaskUser(taskId int64, userMap *map[int64]*model.User, isOwner bool) string {
+// findTaskUser 查找任务成员，包含负责人或协助人员
+func findTaskUser(taskId int64, userMap *map[int64]*model.User, isOwner bool) string {
 	taskUsers, err := repo.ProjectTaskUser.WithContext(context.Background()).Where(repo.ProjectTaskUser.TaskID.Eq(taskId)).Find()
 	if err != nil {
 		log.Printf("Error query task user: %v", err)
@@ -524,7 +530,7 @@ func FindTaskUser(taskId int64, userMap *map[int64]*model.User, isOwner bool) st
 	return GetUserNames(taskOwnerIds, userMap)
 }
 
-// GetUserNames 获取一组用户的名称
+// GetUserNames 获取一组用户的名称，使用逗号进行分隔
 func GetUserNames(userIds []int64, userMap *map[int64]*model.User) string {
 	names := make([]string, len(userIds))
 	uMap := *userMap
@@ -538,7 +544,6 @@ func GetUserNames(userIds []int64, userMap *map[int64]*model.User) string {
 
 	}
 	return strings.Join(names, ",")
-
 }
 
 // generateMarkdown 将 TaskRowText 转换为 Markdown 格式的文本
