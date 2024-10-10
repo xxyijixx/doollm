@@ -30,7 +30,7 @@ var defaultConfig = envConfigSchema{
 	ENV: "dev",
 
 	MYSQL_HOST:     "127.0.0.1",
-	MYSQL_PORT:     "49716",
+	MYSQL_PORT:     "52245",
 	MYSQL_USERNAME: "dootask",
 	MYSQL_PASSWORD: "123456",
 	MYSQL_DB_NAME:  "dootask",
