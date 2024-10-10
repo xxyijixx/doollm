@@ -10,7 +10,7 @@ import (
 func TestCreateWorkspace(t *testing.T) {
 	client := NewClient()
 	resp, err := client.CreateWorkspace(workspace.CreateParams{
-		Name: "jintianxingqisi",
+		Name: "workspace-for-user-5",
 	})
 	if err != nil {
 		fmt.Printf("Error create workspace %v", err)
@@ -19,6 +19,39 @@ func TestCreateWorkspace(t *testing.T) {
 	}
 	jsonData, _ := json.MarshalIndent(resp, "", "  ")
 	fmt.Println(string(jsonData))
+}
+
+func TestDeleteWorkspace(t *testing.T) {
+	client := NewClient()
+	err := client.DeleteWorkspace("workspace-for-user-4")
+	if err != nil {
+		t.Errorf("err: %v", err)
+	}
+}
+
+func TestCreateAndDeleteWorkspace(t *testing.T) {
+	client := NewClient()
+	slug := ""
+	t.Run("CreateWorkspace", func(t *testing.T) {
+		resp, err := client.CreateWorkspace(workspace.CreateParams{
+			Name: "workspace-for-user-5",
+		})
+		if err != nil {
+			t.Errorf("Error create workspace %v", err)
+			return
+		}
+		slug = resp.Workspace.Slug
+	})
+
+	t.Run("DeleteWorkspace", func(t *testing.T) {
+		if slug == "" {
+			t.Error("Error delete workspace, slug is empty")
+		}
+		err := client.DeleteWorkspace(slug)
+		if err != nil {
+			t.Errorf("err: %v", err)
+		}
+	})
 }
 
 func TestQueryWorkspaces(t *testing.T) {
