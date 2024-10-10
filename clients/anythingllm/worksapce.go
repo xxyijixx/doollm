@@ -60,7 +60,7 @@ func (c *Client) QueryWorkspace(slug string) (*workspace.GetResponse, error) {
 
 // DeleteWorkspace Deletes a workspace by its slug.
 func (c *Client) DeleteWorkspace(slug string) error {
-	url := GetRequestUrl("/v1/workspaces/" + slug)
+	url := GetRequestUrl("/v1/workspace/" + slug)
 	resp, err := utils.SendRequest(c.httpClient, "DELETE", url, nil, "")
 	if err != nil {
 		return err

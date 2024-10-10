@@ -40,3 +40,13 @@ func (c *Client) GetChatsForWorkspaceThread(workspaceSlug, threadSlug string) (*
 	}
 	return &data, nil
 }
+
+func (c *Client) DeleteWorkspaceThread(workspaceSlug, threadSlug string) error {
+	url := GetRequestUrl(fmt.Sprintf("/v1/workspace/%s/thread/%s", workspaceSlug, threadSlug))
+	resp, err := utils.SendRequest(c.httpClient, "DELETE", url, nil, "application/json")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}

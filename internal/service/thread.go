@@ -92,3 +92,22 @@ func FetchLatestSessionIDByUserID(userID int) (dbModel.HistoryChat, error) {
 	}
 	return session, nil
 }
+
+// 删除某个会话
+func DeleteExternalSession(workspaceSlug, threadSlug string) error {
+	err := anythingllmClient.DeleteWorkspaceThread(workspaceSlug, threadSlug)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// 从数据库中删除该会话
+func DeleteSessionFromDatabase(sessionID string) error {
+	query := "DELETE FROM pre_history_aichats WHERE session_id = ?"
+	_, err := repository.DB.Exec(query, sessionID)
+	if err != nil {
+		return fmt.Errorf("error deleting session from database: %v", err)
+	}
+	return nil
+}
