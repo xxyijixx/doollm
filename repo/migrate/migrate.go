@@ -1,4 +1,4 @@
-package main
+package migrate
 
 import (
 	"doollm/config"
@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func main() {
+func Migrate() {
 	var err error
 	dsn := config.EnvConfig.GetDSN()
 	db, err := gorm.Open(
