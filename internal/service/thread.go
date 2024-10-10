@@ -5,43 +5,26 @@ import (
 	"doollm/internal/model"
 	"doollm/internal/repository"
 	dbModel "doollm/repo/model"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"time"
 )
 
 // 获取某个对话窗口的所有历史记录
 func FetchChatHistory(workspaceSlug, threadSlug string) ([]model.ChatMessage, error) {
-	url := fmt.Sprintf("http://103.63.139.165:3001/api/v1/workspace/%s/thread/%s/chats", workspaceSlug, threadSlug)
-	req, err := http.NewRequest("GET", url, nil)
+
+	resp, err := anythingllmClient.GetChatsForWorkspaceThread(workspaceSlug, threadSlug)
 	if err != nil {
 		return nil, err
 	}
-
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer CM34YVB-3HJM2RS-PRGK1D2-ECZD4R6")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
+	content := make([]model.ChatMessage, len(resp.History))
+	for i, h := range resp.History {
+		content[i] = model.ChatMessage{
+			Content: h.Content,
+		}
 	}
 
-	var history model.ChatHistory
-	if err := json.Unmarshal(body, &history); err != nil {
-		return nil, err
-	}
-
-	return history.History, nil
+	return content, nil
 }
 
 // 更新最后一条消息并返回所有字段

@@ -10,7 +10,6 @@ import (
 
 func (c *Client) CreateWorkspace(params workspace.CreateParams) (*workspace.CreateResponse, error) {
 	url := GetRequestUrl("/v1/workspace/new")
-	utils.SendRequest(c.httpClient, "POST", url, nil, "application/json")
 	jsonData, err := json.Marshal(params)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling JSON: %w", err)

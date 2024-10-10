@@ -1,10 +1,13 @@
 package service
 
 import (
+	"doollm/clients/anythingllm"
 	"doollm/internal/repository"
 	"log"
 	"time"
 )
+
+var anythingllmClient = anythingllm.NewClient()
 
 // 设置定时
 func SyncUsers() {

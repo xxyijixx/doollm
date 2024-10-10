@@ -1,15 +1,11 @@
 package service
 
 import (
-	"bytes"
 	"database/sql"
-	"doollm/internal/model"
+	"doollm/clients/anythingllm/workspace"
 	"doollm/internal/repository"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -17,27 +13,13 @@ import (
 
 // 发送请求到外部 API 创建工作区
 func CreateExternalWorkspace(name string) (string, error) {
-	url := "http://103.63.139.165:3001/api/v1/workspace/new"
-	payload := map[string]string{"name": name}
-	payloadBytes, _ := json.Marshal(payload)
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer CM34YVB-3HJM2RS-PRGK1D2-ECZD4R6")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := anythingllmClient.CreateWorkspace(workspace.CreateParams{
+		Name: name,
+	})
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	var apiResp model.ExternalAPIResponse
-	if err := json.Unmarshal(body, &apiResp); err != nil {
-		return "", err
-	}
-
-	return apiResp.Workspace.Slug, nil
+	return resp.Workspace.Slug, nil
 }
 
 // 更新 workspace_id
@@ -52,26 +34,9 @@ func UpdateWorkspaceID(userID int, slug string) error {
 
 // 删除工作区
 func DeleteExternalWorkspace(slug string) error {
-	url := fmt.Sprintf("http://103.63.139.165:3001/api/v1/workspace/%s", slug)
-	req, err := http.NewRequest("DELETE", url, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Authorization", "Bearer CM34YVB-3HJM2RS-PRGK1D2-ECZD4R6")
-	req.Header.Set("Accept", "*/*")
+	err := anythingllmClient.DeleteWorkspace(slug)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to delete workspace with status: %d", resp.StatusCode)
-	}
-
-	return nil
+	return err
 }
 
 // 重置 workspace_id 为 NULL
@@ -115,32 +80,11 @@ func StoreChatData(model, avatar, threadSlug string, userID int) error {
 
 // 创建新对话窗口
 func CreateNewThread(slug string) (string, error) {
-	url := fmt.Sprintf("http://103.63.139.165:3001/api/v1/workspace/%s/thread/new", slug)
-	reqBody := bytes.NewBuffer([]byte("{}"))
-	req, err := http.NewRequest("POST", url, reqBody)
+	resp, err := anythingllmClient.CreateWorkspaceThread(slug)
 	if err != nil {
-		return "", err
+		return "", nil
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer CM34YVB-3HJM2RS-PRGK1D2-ECZD4R6")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	var respData struct {
-		Thread struct {
-			Slug string `json:"slug"`
-		} `json:"thread"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
-		return "", err
-	}
-
-	return respData.Thread.Slug, nil
+	return resp.Thread.Slug, nil
 }
 
 // 从对话窗口的 slug 中提取用户 ID

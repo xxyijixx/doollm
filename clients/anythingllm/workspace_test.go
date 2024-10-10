@@ -17,8 +17,8 @@ func TestCreateWorkspace(t *testing.T) {
 		return
 
 	}
-
-	fmt.Printf("response : %+v", resp)
+	jsonData, _ := json.MarshalIndent(resp, "", "  ")
+	fmt.Println(string(jsonData))
 }
 
 func TestQueryWorkspaces(t *testing.T) {
@@ -26,6 +26,7 @@ func TestQueryWorkspaces(t *testing.T) {
 	resp, err := client.QueryWorkspaces()
 	if err != nil {
 		fmt.Printf("Error create workspace %v", err)
+		t.Errorf("Error create workspace %v", err)
 		return
 	}
 
