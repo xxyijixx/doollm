@@ -17,7 +17,6 @@ var (
 
 func StartScheduledTask() {
 	scheduledTask := schedule.NewScheduledTask()
-
 	// 每天零点执行 0 0 0 * * ?
 	_, err := scheduledTask.AddTask("0 0,30 * * * ? ", fileService.Traversal)
 	if err != nil {

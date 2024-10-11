@@ -44,7 +44,7 @@ func (c *Client) QueryWorkspaces() (*workspace.ListResponse, error) {
 
 // QueryWorkspace Get a workspace by its unique slug.
 func (c *Client) QueryWorkspace(slug string) (*workspace.GetResponse, error) {
-	url := GetRequestUrl("/v1/workspaces/" + slug)
+	url := GetRequestUrl("/v1/workspace/" + slug)
 	resp, err := utils.SendRequest(c.httpClient, "GET", url, nil, "")
 	if err != nil {
 		return nil, err

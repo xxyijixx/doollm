@@ -71,9 +71,16 @@ func (d *DocumentServiceImpl) RemoveAndUpdateWorkspace(documentId int64, newLoca
 
 // RemoveAndUpdateWorkspace
 func (d *DocumentServiceImpl) RemoveAll(removeLinkType string) error {
-	log.Warnf("正在清除类型为[%s]的文档", removeLinkType)
 	ctx := context.Background()
-	documents, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(removeLinkType)).Find()
+	llmDocumentDo := repo.LlmDocument.WithContext(ctx)
+	if removeLinkType != "" {
+		log.Warnf("正在清除类型为[%s]的文档", removeLinkType)
+		llmDocumentDo.Where(repo.LlmDocument.LinkType.Eq(removeLinkType))
+	} else {
+		log.Warn("正在清除全部类型的文档")
+	}
+
+	documents, err := llmDocumentDo.Find()
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil
