@@ -35,3 +35,32 @@ type RawTextMetadata struct {
 	// KeyTwo string `json:"keyTwo"`
 	// Etc    string `json:"etc"`
 }
+
+type QueryResponse struct {
+	LocalFiles struct {
+		Name  string `json:"name"`
+		Type  string `json:"type"`
+		Items []struct {
+			Name  string `json:"name"`
+			Type  string `json:"type"`
+			Items []struct {
+				Name               string        `json:"name"`
+				Type               string        `json:"type"`
+				ID                 string        `json:"id"`
+				URL                string        `json:"url"`
+				Title              string        `json:"title"`
+				DocAuthor          string        `json:"docAuthor"`
+				Description        string        `json:"description"`
+				DocSource          string        `json:"docSource"`
+				ChunkSource        string        `json:"chunkSource"`
+				Published          string        `json:"published"`
+				WordCount          int           `json:"wordCount"`
+				TokenCountEstimate int           `json:"token_count_estimate"`
+				Cached             bool          `json:"cached"`
+				PinnedWorkspaces   []interface{} `json:"pinnedWorkspaces"`
+				CanWatch           bool          `json:"canWatch"`
+				Watched            bool          `json:"watched"`
+			} `json:"items"`
+		} `json:"items"`
+	} `json:"localFiles"`
+}

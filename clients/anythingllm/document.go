@@ -9,6 +9,21 @@ import (
 	"fmt"
 )
 
+func (c *Client) QueryDocument() (*documents.QueryResponse, error) {
+	url := GetRequestUrl("/v1/documents")
+	resp, err := utils.SendRequest(c.httpClient, "GET", url, nil, "")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var data documents.QueryResponse
+	if err := utils.ParseResponse(resp, &data); err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
 func (c *Client) DocumentUpload(filePath, extension string) (*documents.UploadResponse, error) {
 	url := GetRequestUrl("/v1/document/upload")
 	body, contentType, err := utils.CreateMultipartBody(filePath, extension)
