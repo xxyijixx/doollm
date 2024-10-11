@@ -363,7 +363,7 @@ func (f *FileServiceImpl) updateOrInsertDocument(ctx context.Context, file *mode
 	}
 	filePath := config.PublicPath(content.URL)
 	log.Info("正在处理", filePath)
-	res, err := anythingllmClient.UploadFile(filePath, file.Ext)
+	res, err := anythingllmClient.DocumentUpload(filePath, file.Ext)
 	if err != nil || !res.Success {
 		return err
 	}
