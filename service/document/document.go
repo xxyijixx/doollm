@@ -46,10 +46,15 @@ func (d *DocumentServiceImpl) Remove(documentId int64) {
 
 // RemoveAndUpdateWorkspace
 func (d *DocumentServiceImpl) RemoveAndUpdateWorkspace(documentId int64, newLocation, oldLocation string) error {
+
 	// 移除旧文档
-	anythingllmClient.RemoveDocument(system.RemoveDocumentParams{
+	err := anythingllmClient.RemoveDocument(system.RemoveDocumentParams{
 		Names: []string{oldLocation},
 	})
+	if err != nil {
+		log.Errorf("移除文档[#%d]失败: %v", documentId, err)
+		return nil
+	}
 
 	// 查找需要更新的工作区文档
 	workspaceDocuments, err := repo.LlmWorkspaceDocument.WithContext(context.Background()).
@@ -62,11 +67,34 @@ func (d *DocumentServiceImpl) RemoveAndUpdateWorkspace(documentId int64, newLoca
 		return err
 	}
 
+	ctx := context.Background()
 	// 更新工作区文档信息
 	for _, workDocument := range workspaceDocuments {
-		anythingllmClient.UpdateEmbeddings(workDocument.WorkspaceSlug, workspace.UpdateEmbeddingsParams{
+		log.Infof("工作区[%s]更新后新增文档[%s]", workDocument.WorkspaceSlug, newLocation)
+		resp, err := anythingllmClient.UpdateEmbeddings(workDocument.WorkspaceSlug, workspace.UpdateEmbeddingsParams{
 			Adds: []string{newLocation},
 		})
+		if err != nil {
+			log.Errorf("工作区[%s]更新后新增文档[%s]失败: %v", workDocument.WorkspaceSlug, newLocation, err)
+			// 移除记录
+			repo.LlmWorkspaceDocument.WithContext(ctx).Where(repo.LlmWorkspaceDocument.DocumentID.Eq(documentId),
+				repo.LlmWorkspaceDocument.WorkspaceSlug.Eq(workDocument.WorkspaceSlug)).Delete()
+			continue
+		}
+		flag := false
+		for _, workspaceDocument := range resp.Workspace.Documents {
+			if workspaceDocument.Docpath == newLocation {
+				flag = true
+				break
+			}
+		}
+		if !flag {
+			log.Debugf("文档[#%d]移动到工作区失败:", workDocument.DocumentID)
+			// 移除记录
+			repo.LlmWorkspaceDocument.WithContext(ctx).Where(repo.LlmWorkspaceDocument.DocumentID.Eq(documentId),
+				repo.LlmWorkspaceDocument.WorkspaceSlug.Eq(workDocument.WorkspaceSlug)).Delete()
+			continue
+		}
 	}
 	return nil
 }
