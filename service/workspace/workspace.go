@@ -48,8 +48,8 @@ func (w *WorkspaceServiceImpl) GetWorkspaceUser() ([]*model.LlmWorkspace, map[in
 	userWorkspaces := make([]*model.LlmWorkspace, len(userWorkspacePermission))
 	for i, workspacePermission := range userWorkspacePermission {
 		userWorkspaces[i] = &model.LlmWorkspace{
-			ID:        workspacePermission.ID,
-			Userid:    workspacePermission.UserID,
+			ID:        int64(workspacePermission.ID),
+			Userid:    int64(workspacePermission.UserID),
 			Name:      workspacePermission.WorkspaceID,
 			Slug:      workspacePermission.WorkspaceID,
 			CreatedAt: workspacePermission.CreateTime,
@@ -190,8 +190,8 @@ func (w *WorkspaceServiceImpl) SelectByUserId(userid int64) (*model.LlmWorkspace
 	}
 
 	workspace := &model.LlmWorkspace{
-		ID:        workspacePermission.ID,
-		Userid:    workspacePermission.UserID,
+		ID:        int64(workspacePermission.ID),
+		Userid:    int64(workspacePermission.UserID),
 		Name:      workspacePermission.WorkspaceID,
 		Slug:      workspacePermission.WorkspaceID,
 		CreatedAt: workspacePermission.CreateTime,
