@@ -44,7 +44,7 @@ func (d *DocumentServiceImpl) Remove(documentId int64) {
 	_ = resultInfo
 }
 
-// RemoveAndUpdateWorkspace
+// RemoveAndUpdateWorkspace 移除旧文档内容，并重新添加到工作区
 func (d *DocumentServiceImpl) RemoveAndUpdateWorkspace(documentId int64, newLocation, oldLocation string) error {
 
 	// 移除旧文档

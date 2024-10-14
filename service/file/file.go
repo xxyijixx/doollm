@@ -80,7 +80,7 @@ func (f *FileServiceImpl) Traversal() {
 	for i, file := range files {
 		fileIDs[i] = file.ID
 	}
-
+	log.Debugf("满足条件的文件数量: %d", len(files))
 	for _, file := range files {
 		fileContent, err := repo.FileContent.WithContext(ctx).
 			Where(repo.FileContent.Fid.Eq(file.ID)).
@@ -100,15 +100,14 @@ func (f *FileServiceImpl) Traversal() {
 			Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(file.ID)).
 			First()
 		if err != nil && err != gorm.ErrRecordNotFound {
+			log.Debugf("Error query document: %v", err)
 			continue
 		}
-
 		if err := f.updateOrInsertDocument(ctx, file, content, document); err != nil {
 			log.Error(err)
 		}
 
 	}
-
 	// 更新工作区
 	f.UploadWorkspace()
 	// 检测用户权限变化
@@ -128,7 +127,7 @@ func (f *FileServiceImpl) UploadWorkspace() {
 	for _, document := range documents {
 		handleFileAuth(document.LinkId)
 	}
-
+	log.Debugf("Uploaded user workspace ...")
 }
 
 // Delete 删除文件，移除知识库文档并更新用户工作区
@@ -162,29 +161,18 @@ func (f *FileServiceImpl) Update(fileId int64) {
 		return
 	}
 
-	// 查找文件可见用户，按用户ID进行升序排序，userid为0表示所有人
-	fileUsers, err := repo.FileUser.WithContext(ctx).Where(repo.FileUser.FileID.Eq(file.ID)).Order(repo.FileUser.Userid.Asc()).Find()
-	if err != nil {
-		if err != gorm.ErrRecordNotFound {
-			log.Debugf("error query file user %v", err)
-			return
-		}
-	}
-	fileUserIds := make([]int64, len(fileUsers))
-	fileUserMap := make(map[int64]*model.FileUser)
+	fileUserIds, allUserflag := GetFileShareUserList(file)
+	fileUserMap := make(map[int64]interface{})
 
-	for i, fileUser := range fileUsers {
-		fileUserIds[i] = fileUser.Userid
-		fileUserMap[fileUser.Userid] = fileUser
+	for _, userid := range fileUserIds {
+		fileUserMap[userid] = true
 	}
 	// 在文件可见用户中，哪些用户没有工作区权限，需要移除
 	permissionDeniedUser := make([]int64, 0)
-	if len(fileUsers) != 0 {
-		if fileUsers[0].Userid != 0 {
-			for _, userWorkspace := range workspaceList {
-				if _, exists := fileUserMap[userWorkspace.Userid]; !exists {
-					permissionDeniedUser = append(permissionDeniedUser, userWorkspace.Userid)
-				}
+	if !allUserflag {
+		for _, userWorkspace := range workspaceList {
+			if _, exists := fileUserMap[userWorkspace.Userid]; !exists {
+				permissionDeniedUser = append(permissionDeniedUser, userWorkspace.Userid)
 			}
 		}
 	}
@@ -194,15 +182,16 @@ func (f *FileServiceImpl) Update(fileId int64) {
 		GetAllFile(ctx, file.ID, &files)
 		// 处理文件
 		for _, file := range files {
-			updateFile(ctx, file, permissionDeniedUser, fileUsers, userWorkspaceMap)
+			updateFile(ctx, file, permissionDeniedUser, fileUserMap, allUserflag, userWorkspaceMap)
 		}
 	} else {
-		updateFile(ctx, file, permissionDeniedUser, fileUsers, userWorkspaceMap)
+		updateFile(ctx, file, permissionDeniedUser, fileUserMap, allUserflag, userWorkspaceMap)
 	}
 }
 
 // updateFile 更新文件
-func updateFile(ctx context.Context, file *model.File, permissionDeniedUser []int64, fileUsers []*model.FileUser, userWorkspaceMap map[int64]*model.LlmWorkspace) {
+// 没有权限的用户移除，有权限的用户上传
+func updateFile(ctx context.Context, file *model.File, permissionDeniedUser []int64, fileUserMap map[int64]interface{}, allFlag bool, userWorkspaceMap map[int64]*model.LlmWorkspace) {
 	// 判断文件类型是否支持
 	if !isSupport(file) {
 		log.Debugf("文件[#%d]不支持的文件类型: %s", file.ID, file.Type)
@@ -213,21 +202,24 @@ func updateFile(ctx context.Context, file *model.File, permissionDeniedUser []in
 		Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(file.ID)).
 		First()
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Debugf("未找到文件[#%d]相关文档信息", file.ID)
+			return
+		}
 		log.Debugf("错误查询文件[#%d]对应的文档信息: %v", file.ID, err)
 		return
 	}
-
-	for _, fileUser := range fileUsers {
-		// 如果共享所有人，对所有用户工作区上传，否则单个上传
-		if fileUser.Userid == 0 {
-			for _, userWorkspace := range userWorkspaceMap {
-				workspaceService.Upload(userWorkspace.Userid, document.ID)
-			}
-			break
-		} else {
-			workspaceService.Upload(fileUser.Userid, document.ID)
+	// 如果共享所有人，对所有用户工作区上传，否则单个上传
+	if allFlag {
+		for _, userWorkspace := range userWorkspaceMap {
+			workspaceService.Upload(userWorkspace.Userid, document.ID)
+		}
+	} else {
+		for userid := range fileUserMap {
+			workspaceService.Upload(userid, document.ID)
 		}
 	}
+
 	// 处理哪些用户需要将文件移除
 	for _, userid := range permissionDeniedUser {
 		if userid == file.Userid {
@@ -235,8 +227,12 @@ func updateFile(ctx context.Context, file *model.File, permissionDeniedUser []in
 		}
 		workspaceService.RemoveDocument(userid, document.ID)
 	}
-	// 文件所有者上传
-	workspaceService.Upload(file.Userid, document.ID)
+	// 对文件拥有者处理
+	if _, exist := userWorkspaceMap[file.Userid]; exist {
+		workspaceService.Upload(file.Userid, document.ID)
+	} else {
+		workspaceService.RemoveDocument(file.Userid, document.ID)
+	}
 }
 
 // UpdateByFileUser 更新工作区，根据文件共享情况进行更新
@@ -356,15 +352,17 @@ func VerifyTxtFile(fileContent *model.FileContent) bool {
 	return true
 }
 
+// updateOrInsertDocument 根据文件是否已上传和文件内容是否更新判断是否进行上传或更新
 func (f *FileServiceImpl) updateOrInsertDocument(ctx context.Context, file *model.File, content Content, document *model.LlmDocument) error {
 	if document != nil && document.LastModifiedAt.Equal(file.UpdatedAt) {
 		log.Debugf("File[#%d]没有更新", file.ID)
 		return nil
 	}
 	filePath := config.PublicPath(content.URL)
-	log.Info("正在处理", filePath)
+	log.Infof("正在上传文件 ID=%v filPath=%v", file.ID, filePath)
 	res, err := anythingllmClient.DocumentUpload(filePath, file.Ext)
 	if err != nil || !res.Success {
+		log.Errorf("上传文件失败: %v", err)
 		return err
 	}
 	if len(res.Documents) == 0 {
@@ -436,6 +434,7 @@ func handleFileAuth(fileId int64) {
 		fileUsers, err := repo.FileUser.WithContext(ctx).Order(repo.FileUser.Userid.Asc()).Find()
 		if err != nil {
 			if err != gorm.ErrRecordNotFound {
+				log.Errorf("查询文件共享用户失败: %v", err)
 				return
 			}
 			log.Debugf("文件[#%v]不存在共享", file.ID)
@@ -451,42 +450,53 @@ func handleFileAuth(fileId int64) {
 				}
 			}
 		}
-		workspaceService.Upload(file.Userid, document.ID)
 	} else {
 		// 对于非位于顶级目录的文件
-		shareUserIds := getFileShareUsers(file, workspaceUserIds)
+		shareUserIds, _ := GetFileShareUserList(file)
 		log.Debugf("文件[#%v]共享用户：%v", file.ID, shareUserIds)
 		for _, userid := range shareUserIds {
 			workspaceService.Upload(userid, document.ID)
 		}
 	}
+	// 文件拥有者上传
 	workspaceService.Upload(file.Userid, document.ID)
 }
 
-// getFileShareUsers 获取文件可见用户列表
-func getFileShareUsers(file *model.File, workspaceUserIds []int64) []int64 {
-	pids := file.Pids
-	parts := strings.Split(strings.Trim(pids, ","), ",")
+// GetFileShareUserList 获取文件可见用户列表
+func GetFileShareUserList(file *model.File) ([]int64, bool) {
+
 	ctx := context.Background()
 	shareUsers := make([]int64, 0)
+	pids := file.Pids
+	parts := strings.Split(strings.Trim(pids, ","), ",")
+	parts = append([]string{string(file.ID)}, parts...)
 	for _, part := range parts {
-		pid, err := strconv.ParseInt(part, 10, 64)
+		fileId, err := strconv.ParseInt(part, 10, 64)
 		if err != nil {
-			return shareUsers
+			return shareUsers, false
 		}
-		fileUsers, err := repo.FileUser.WithContext(ctx).Where(repo.FileUser.FileID.Eq(pid)).Order(repo.FileUser.Userid.Asc()).Find()
+		fileUsers, err := repo.FileUser.WithContext(ctx).Where(repo.FileUser.FileID.Eq(fileId)).Order(repo.FileUser.Userid.Asc()).Find()
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				continue
 			}
-			return []int64{}
+			return []int64{}, false
 		}
 		for _, fileUser := range fileUsers {
+			// 所有人
 			if fileUser.Userid == 0 {
-				return workspaceUserIds
+				users, err := repo.User.WithContext(ctx).Select(repo.User.Userid).Find()
+				if err != nil {
+					log.Debugf("Error query user %v", err)
+					return []int64{}, false
+				}
+				for _, user := range users {
+					shareUsers = append(shareUsers, user.Userid)
+				}
+				return shareUsers, true
 			}
 			shareUsers = append(shareUsers, fileUser.Userid)
 		}
 	}
-	return shareUsers
+	return shareUsers, false
 }
