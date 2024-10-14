@@ -450,7 +450,7 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 	}
 
 	fileName := fmt.Sprintf("task-%d-%d-%d", h.project.ID, h.task.ID, time.Now().Unix())
-	res, err := anythingllmClient.UploadFileFormString(generateMarkdown(*h.rowTask), fileName, "md")
+	res, err := anythingllmClient.DocumentUploadFormString(generateMarkdown(*h.rowTask), fileName, "md")
 	if err != nil || !res.Success {
 		return err
 	}

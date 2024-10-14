@@ -141,7 +141,7 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 		},
 	}
 
-	res, err := anythingllmClient.UploadRowText(params)
+	res, err := anythingllmClient.DocumentUploadRowText(params)
 	if err != nil || !res.Success {
 		return err
 	}
