@@ -48,7 +48,8 @@ var defaultConfig = envConfigSchema{
 	LLM_SERVER_URL: "http://localhost:3001/api",
 	LLM_TOKEN:      "xxxxxxxxxxxxx",
 
-	MAX_ALLOWED_WORKSPACES: 3,
+	FREE_MAX_ALLOWED_WORKSPACES: 3,
+	PRO_MAX_ALLOWED_WORKSPACES:  10,
 }
 
 type envConfigSchema struct {
@@ -69,7 +70,8 @@ type envConfigSchema struct {
 	LLM_SERVER_URL string
 	LLM_TOKEN      string
 
-	MAX_ALLOWED_WORKSPACES int
+	FREE_MAX_ALLOWED_WORKSPACES int
+	PRO_MAX_ALLOWED_WORKSPACES  int
 }
 
 func (s *envConfigSchema) IsDev() bool {

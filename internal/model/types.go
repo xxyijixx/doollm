@@ -58,3 +58,9 @@ type ChatMessage struct {
 // 	UpdateTime   string `json:"update_time"`
 // 	Avatar       string `json:"avatar"`
 // }
+
+type SetSubscription struct {
+	Type      string `json:"type"` // 订阅类型 (free 或 pro)
+	Time      string `json:"time"` // 有效期 (例如 "30day")
+	IsForever bool   `json:"is_forever"`
+}

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // 主页路由
@@ -64,13 +65,28 @@ func handleSetPermission(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.IsCreate {
+		subscriptionType, err := service.GetSubscriptionType()
+		if err != nil {
+			JsonResponse(w, map[string]string{"error": "Failed to get subscription type"}, http.StatusInternalServerError)
+			return
+		}
+
+		var maxAllowed int
+		switch subscriptionType {
+		case "free":
+			maxAllowed = config.EnvConfig.FREE_MAX_ALLOWED_WORKSPACES
+		case "pro":
+			maxAllowed = config.EnvConfig.PRO_MAX_ALLOWED_WORKSPACES
+		default:
+			maxAllowed = config.EnvConfig.FREE_MAX_ALLOWED_WORKSPACES
+		}
+
 		count, err := service.CheckWorkspacePermissions(repository.DB)
 		if err != nil {
 			JsonResponse(w, map[string]string{"error": "Failed to check workspace permissions"}, http.StatusInternalServerError)
 			return
 		}
 
-		maxAllowed := config.EnvConfig.MAX_ALLOWED_WORKSPACES
 		if count >= maxAllowed {
 			JsonResponse(w, map[string]string{"error": "The limit of non-empty workspace_ids has been reached"}, http.StatusForbidden)
 			return
@@ -360,4 +376,54 @@ func handleIsAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	JsonResponse(w, map[string]bool{"is_admin": isAdmin}, http.StatusOK)
+}
+
+func handleSetSubscriptionType(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if r.Method == "OPTIONS" {
+		return
+	}
+	if r.Method != "POST" {
+		JsonResponse(w, map[string]string{"error": "Only POST method is allowed"}, http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req model.SetSubscription
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&req); err != nil {
+		JsonResponse(w, map[string]string{"error": err.Error()}, http.StatusBadRequest)
+		return
+	}
+
+	if req.Type != "free" && req.Type != "pro" {
+		JsonResponse(w, map[string]string{"error": "Invalid subscription type"}, http.StatusBadRequest)
+		return
+	}
+
+	startTime := time.Now()
+	var endTime time.Time
+	if req.IsForever {
+		// 无限期
+		endTime = time.Time{}
+	} else {
+		switch req.Time {
+		case "30day":
+			endTime = startTime.AddDate(0, 0, 30)
+		case "180day":
+			endTime = startTime.AddDate(0, 0, 180)
+		case "1year":
+			endTime = startTime.AddDate(1, 0, 0)
+		default:
+			JsonResponse(w, map[string]string{"error": "Invalid time format"}, http.StatusBadRequest)
+			return
+		}
+	}
+
+	err := service.SetSubscriptionType(req.Type, startTime, endTime, req.IsForever)
+	if err != nil {
+		JsonResponse(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
+		return
+	}
+
+	JsonResponse(w, map[string]string{"message": "Subscription type updated successfully"}, http.StatusOK)
 }

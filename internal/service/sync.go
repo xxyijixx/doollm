@@ -11,12 +11,13 @@ var anythingllmClient = anythingllm.NewClient()
 
 // 设置定时
 func SyncUsers() {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(30 * time.Second) // 每 30 秒执行一次
 	defer ticker.Stop()
 
 	for range ticker.C {
 		log.Println("Syncing users...")
 		syncUsers()
+		checkAndUpdateSubscriptions()
 	}
 }
 
@@ -62,5 +63,5 @@ func syncUsers() {
 		return
 	}
 
-	log.Println("Sync completed successfully")
+	//log.Println("Sync completed successfully")
 }
