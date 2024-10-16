@@ -97,3 +97,7 @@ type UpdateEmbeddingsResponse struct {
 		} `json:"documents"`
 	} `json:"workspace"`
 }
+
+type SelectModelResponse struct {
+	Content string `json:"content"`
+}

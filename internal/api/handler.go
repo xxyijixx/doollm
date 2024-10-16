@@ -26,25 +26,25 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 // 同步路由
-func handleSync(w http.ResponseWriter, r *http.Request) {
-	setupCORS(&w, r)
-	if r.Method == "OPTIONS" {
-		return
-	}
-	if r.Method != "GET" {
-		JsonResponse(w, map[string]string{"error": "Only GET method is allowed"}, http.StatusMethodNotAllowed)
-		return
-	}
+// func handleSync(w http.ResponseWriter, r *http.Request) {
+// 	setupCORS(&w, r)
+// 	if r.Method == "OPTIONS" {
+// 		return
+// 	}
+// 	if r.Method != "GET" {
+// 		JsonResponse(w, map[string]string{"error": "Only GET method is allowed"}, http.StatusMethodNotAllowed)
+// 		return
+// 	}
 
-	go service.SyncUsers()
-	response := struct {
-		Message string `json:"message"`
-	}{
-		Message: "Sync started",
-	}
+// 	go service.SyncUsers()
+// 	response := struct {
+// 		Message string `json:"message"`
+// 	}{
+// 		Message: "Sync started",
+// 	}
 
-	JsonResponse(w, response, http.StatusOK)
-}
+// 	JsonResponse(w, response, http.StatusOK)
+// }
 
 // 设置权限路由
 func handleSetPermission(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +63,9 @@ func handleSetPermission(w http.ResponseWriter, r *http.Request) {
 		JsonResponse(w, map[string]string{"error": err.Error()}, http.StatusBadRequest)
 		return
 	}
+
+	// 同步用户
+	service.SyncUsers()
 
 	if req.IsCreate {
 		subscriptionType, err := service.GetSubscriptionType()
@@ -378,6 +381,7 @@ func handleIsAdmin(w http.ResponseWriter, r *http.Request) {
 	JsonResponse(w, map[string]bool{"is_admin": isAdmin}, http.StatusOK)
 }
 
+// 解锁工作区路由
 func handleSetSubscriptionType(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if r.Method == "OPTIONS" {
@@ -426,4 +430,27 @@ func handleSetSubscriptionType(w http.ResponseWriter, r *http.Request) {
 	}
 
 	JsonResponse(w, map[string]string{"message": "Subscription type updated successfully"}, http.StatusOK)
+}
+
+// 切换工作区模型路由
+func handleSelectModel(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	var req model.SelectModelRequest
+
+	if r.Method != "POST" {
+		JsonResponse(w, map[string]string{"error": "Only POST method is allowed"}, http.StatusMethodNotAllowed)
+		return
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		JsonResponse(w, map[string]string{"error": err.Error()}, http.StatusBadRequest)
+		return
+	}
+
+	_, err := service.SelectModel(req.Model)
+	if err != nil {
+		JsonResponse(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
+		return
+	}
+
+	JsonResponse(w, map[string]string{"message": "Select workspace model successfully"}, http.StatusOK)
 }
