@@ -89,3 +89,26 @@ func (c *Client) UpdateEmbeddings(slug string, params workspace.UpdateEmbeddings
 	return &data, nil
 
 }
+
+func (c *Client) SelectWorkspaceModel(workspaceSlug, chatProvider, chatModel string) (*workspace.SelectModelResponse, error) {
+	url := GetRequestUrl(fmt.Sprintf("/v1/workspace/%s/update", workspaceSlug))
+	data := map[string]string{
+		"chatProvider": chatProvider,
+		"chatModel":    chatModel,
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling JSON: %w", err)
+	}
+	resp, err := utils.SendRequest(c.httpClient, "POST", url, bytes.NewBuffer(jsonData), "application/json")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var response workspace.SelectModelResponse
+	if err := utils.ParseResponse(resp, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}

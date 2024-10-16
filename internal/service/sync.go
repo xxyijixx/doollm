@@ -10,19 +10,19 @@ import (
 var anythingllmClient = anythingllm.NewClient()
 
 // 设置定时
-func SyncUsers() {
-	ticker := time.NewTicker(30 * time.Second) // 每 30 秒执行一次
-	defer ticker.Stop()
+// func SyncUsers() {
+// 	ticker := time.NewTicker(30 * time.Second) // 每 30 秒执行一次
+// 	defer ticker.Stop()
 
-	for range ticker.C {
-		log.Println("Syncing users...")
-		syncUsers()
-		checkAndUpdateSubscriptions()
-	}
-}
+// 	for range ticker.C {
+// 		log.Println("Syncing users...")
+// 		syncUsers()
+// 		checkAndUpdateSubscriptions()
+// 	}
+// }
 
 // 同步 pre_users 表用户
-func syncUsers() {
+func SyncUsers() {
 	currentTime := time.Now().Format(time.DateTime)
 	tx, err := repository.DB.Begin()
 	if err != nil {

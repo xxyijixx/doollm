@@ -64,3 +64,7 @@ type SetSubscription struct {
 	Time      string `json:"time"` // 有效期 (例如 "30day")
 	IsForever bool   `json:"is_forever"`
 }
+
+type SelectModelRequest struct {
+	Model string `json:"model"`
+}

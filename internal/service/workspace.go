@@ -99,3 +99,20 @@ func ExtractUserID(slug string) (int, error) {
 	}
 	return userID, nil
 }
+
+func SelectModel(model string) (string, error) {
+	parts := strings.Split(model, ",")
+	if len(parts) != 3 {
+		return "", fmt.Errorf("invalid model format, expected 'workspaceSlug, provider, model'")
+	}
+	workspaceSlug := strings.TrimSpace(parts[0])
+	chatProvider := strings.TrimSpace(parts[1])
+	chatModel := strings.TrimSpace(parts[2])
+
+	resp, err := anythingllmClient.SelectWorkspaceModel(workspaceSlug, chatProvider, chatModel)
+	if err != nil {
+		return "select model failed", err
+	}
+
+	return resp.Content, nil
+}
