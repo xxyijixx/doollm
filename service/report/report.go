@@ -15,6 +15,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gen"
 	"gorm.io/gorm"
 )
 
@@ -39,7 +40,7 @@ var anythingllmClient = anythingllm.NewClient()
 var documentService = &document.DocumentServiceImpl{}
 var workspaceService = &workspace.WorkspaceServiceImpl{}
 
-// Traversal 对用户的工作报告进行处理，暂时不分批处理
+// Traversal 对用户的工作报告进行处理
 func (r *ReportServiceImpl) Traversal() {
 
 	ctx := context.Background()
@@ -57,30 +58,35 @@ func (r *ReportServiceImpl) Traversal() {
 	if len(userIds) == 0 {
 		return
 	}
-	reports, err := repo.Report.WithContext(ctx).Where(repo.Report.Userid.In(userIds...)).Find()
-	if err != nil {
-		return
-	}
 	// 构建 UserId 到 User 的映射
 	userMap := make(map[int64]*model.User)
 	for _, user := range users {
 		userMap[user.Userid] = user
 	}
-
-	for _, report := range reports {
-		document, err := repo.LlmDocument.WithContext(ctx).
-			Where(repo.LlmDocument.LinkType.Eq(linktype.REPORT)).
-			Where(repo.LlmDocument.LinkId.Eq(report.ID)).
-			Where(repo.LlmDocument.LinkParantId.Eq(0)).
-			First()
-		if err != nil && err != gorm.ErrRecordNotFound {
-			log.Info("错误：", err)
-			return
+	var reports []*model.Report
+	// 分批处理
+	// 排除汇报的内容，该字段类型为longtext，在后续使用的地方再查询内容
+	err = repo.Report.WithContext(ctx).Omit(repo.Report.Content).FindInBatches(&reports, 100, func(tx gen.Dao, batch int) error {
+		for _, report := range reports {
+			document, err := repo.LlmDocument.WithContext(ctx).
+				Where(repo.LlmDocument.LinkType.Eq(linktype.REPORT)).
+				Where(repo.LlmDocument.LinkId.Eq(report.ID)).
+				Where(repo.LlmDocument.LinkParantId.Eq(0)).
+				First()
+			if err != nil && err != gorm.ErrRecordNotFound {
+				log.Debugf("Error query document by report id: %v, err: %v", report.ID, err)
+				return nil
+			}
+			if err := r.updateOrInsertDocument(ctx, report, document, userMap); err != nil {
+				log.Error(err)
+				return nil
+			}
 		}
-
-		if err := r.updateOrInsertDocument(ctx, report, document, userMap); err != nil {
-			log.Error(err)
-		}
+		return nil
+	})
+	if err != nil {
+		log.Error("分批处理汇报失败", err)
+		return
 	}
 
 	// 上传用户工作区
@@ -117,10 +123,16 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 
 	user, exists := userMap[report.Userid]
 	if !exists {
-		log.Warn("查询不到用户信息")
-		return nil
+		return fmt.Errorf("查询不到用户信息 userid: %v", report.Userid)
 	}
 	receiveUserNames := handleReceive(ctx, *report, userMap)
+
+	// 构建上传的文本内容
+	reportContent, err := repo.Report.WithContext(ctx).Select(repo.Report.Content).Where(repo.Report.ID.Eq(report.ID)).First()
+	if err != nil {
+		return fmt.Errorf("查询工作汇报内容错误: %v", err)
+	}
+	report.Content = reportContent.Content
 	reportJson := ReportJsonData{
 		Title:       report.Title,
 		Type:        report.Type,
@@ -147,6 +159,7 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 	}
 
 	if len(res.Documents) == 0 {
+		log.Debug("上传文档失败, res.Document length is 0")
 		return nil
 	}
 	doc := res.Documents[0]
