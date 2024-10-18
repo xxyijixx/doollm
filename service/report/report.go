@@ -6,12 +6,12 @@ import (
 	"doollm/clients/anythingllm/documents"
 	"doollm/repo"
 	"doollm/repo/model"
+	"doollm/service/common"
 	"doollm/service/document"
 	linktype "doollm/service/document/type"
 	"doollm/service/workspace"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -44,24 +44,9 @@ var workspaceService = &workspace.WorkspaceServiceImpl{}
 func (r *ReportServiceImpl) Traversal() {
 
 	ctx := context.Background()
-	users, err := repo.User.WithContext(ctx).
-		Where(repo.User.Bot.Eq(0)).
-		Find()
+	_, userMap, err := common.GetUserAndBiuldMap(ctx)
 	if err != nil {
-		log.Error("select user fail :", err)
-	}
-
-	userIds := make([]int64, len(users))
-	for i, user := range users {
-		userIds[i] = user.Userid
-	}
-	if len(userIds) == 0 {
 		return
-	}
-	// 构建 UserId 到 User 的映射
-	userMap := make(map[int64]*model.User)
-	for _, user := range users {
-		userMap[user.Userid] = user
 	}
 	var reports []*model.Report
 	// 分批处理
@@ -93,6 +78,7 @@ func (r *ReportServiceImpl) Traversal() {
 	r.UploadWorkspace()
 }
 
+// UploadWorkspace 上传至用户工作区，目前至上传到工作报告所有者的工作区
 func (r *ReportServiceImpl) UploadWorkspace() {
 	ctx := context.Background()
 	documents, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.REPORT)).Find()
@@ -199,7 +185,7 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 
 }
 
-// handleReceive 处理汇报对象
+// handleReceive 处理汇报对象,返回汇报对象的名称集合，多个使用逗号进行分隔
 func handleReceive(ctx context.Context, report model.Report, userMap map[int64]*model.User) string {
 	reportReceive, err := repo.ReportReceive.WithContext(ctx).Where(repo.ReportReceive.Rid.Eq(report.ID)).Find()
 	if err != nil {
@@ -209,27 +195,7 @@ func handleReceive(ctx context.Context, report model.Report, userMap map[int64]*
 	for i, receive := range reportReceive {
 		receiveUserIds[i] = receive.Userid
 	}
-	receiveUsers := findUserByIDs(userMap, receiveUserIds)
-	receiveUserNames := ""
-	if len(receiveUsers) != 0 {
-		names := make([]string, len(receiveUsers))
-		for i, receiveUser := range receiveUsers {
-			names[i] = receiveUser.Nickname
-		}
-		receiveUserNames = strings.Join(names, ",")
-	}
+	receiveUserNames := common.GetUserNames(receiveUserIds, &userMap)
+
 	return receiveUserNames
-}
-
-func findUserByIDs(items map[int64]*model.User, ids []int64) []*model.User {
-
-	var result []*model.User
-
-	for _, id := range ids {
-		if item, exists := items[id]; exists {
-			result = append(result, item)
-		}
-	}
-
-	return result
 }

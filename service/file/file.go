@@ -118,6 +118,7 @@ func (f *FileServiceImpl) Traversal() {
 	log.Infof("End of file processing")
 }
 
+// UploadWorkspace 将知识库文档移动到用户工作区
 func (f *FileServiceImpl) UploadWorkspace() {
 	log.Debugf("Uploading user workspace ...")
 	documents, err := repo.LlmDocument.WithContext(context.Background()).Where(repo.LlmDocument.LinkType.Eq(linktype.FILE)).Find()
@@ -136,7 +137,7 @@ func (f *FileServiceImpl) Delete(fileId int64) {
 	document, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(fileId)).First()
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			log.Debugf("未找到相关文档信息")
+			log.Debugf("未找到文件[%d]相关文档信息", fileId)
 		}
 		return
 	}
@@ -150,7 +151,7 @@ func (f *FileServiceImpl) Update(fileId int64) {
 	file, err := repo.File.WithContext(ctx).Where(repo.File.ID.Eq(fileId)).First()
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			log.Debugf("未找到相关文件信息")
+			log.Debugf("未找到相关文件信息, fileId: %d", fileId)
 		}
 		return
 	}
@@ -176,11 +177,12 @@ func (f *FileServiceImpl) Update(fileId int64) {
 			}
 		}
 	}
-	// 文件夹
+	// 对于文件夹需要查询所有的子文件，进行更新
 	if file.Type == FOLDER {
+
 		files := make([]*model.File, 0)
 		GetAllFile(ctx, file.ID, &files)
-		// 处理文件
+
 		for _, file := range files {
 			updateFile(ctx, file, permissionDeniedUser, fileUserMap, allUserflag, userWorkspaceMap)
 		}

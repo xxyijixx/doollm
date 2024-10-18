@@ -198,3 +198,11 @@ func (w *WorkspaceServiceImpl) SelectByUserId(userid int64) (*model.LlmWorkspace
 	}
 	return workspace, nil
 }
+
+// Delete 删除工作区,删除数据库记录
+func (w *WorkspaceServiceImpl) Delete(workspaceSlug string) error {
+
+	_, err := repo.LlmWorkspaceDocument.WithContext(context.Background()).Where(repo.LlmWorkspaceDocument.WorkspaceSlug.Eq(workspaceSlug)).Delete()
+
+	return err
+}

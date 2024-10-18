@@ -6,6 +6,7 @@ import (
 	"doollm/clients/anythingllm/system"
 	"doollm/repo"
 	"doollm/repo/model"
+	"doollm/service/common"
 	linktype "doollm/service/document/type"
 	"doollm/service/workspace"
 	"encoding/json"
@@ -50,14 +51,10 @@ func (t *TaskServiceImpl) Traversal() {
 	if err != nil {
 		return
 	}
-	users, err := repo.User.WithContext(ctx).Find()
+	// 构建 UserId 到 User 的映射
+	_, userMap, err := common.GetUserAndBiuldMap(ctx)
 	if err != nil {
 		return
-	}
-	// 构建 UserId 到 User 的映射
-	userMap := make(map[int64]*model.User)
-	for _, user := range users {
-		userMap[user.Userid] = user
 	}
 	for _, project := range proojects {
 		handleProject(ctx, project, &userMap)
@@ -65,7 +62,6 @@ func (t *TaskServiceImpl) Traversal() {
 
 	// 上传用户工作区
 	t.UploadWorkspace()
-	// t.UpdateByTaskOwner()
 }
 
 func (t *TaskServiceImpl) UploadWorkspace() {
@@ -104,15 +100,7 @@ func (t *TaskServiceImpl) UpdateByTaskOwner() {
 		log.Info("查询文档信息失败: ", err)
 		return
 	}
-	users, err := repo.User.WithContext(ctx).Find()
-	if err != nil {
-		return
-	}
-	// 构建 UserId 到 User 的映射
-	userMap := make(map[int64]*model.User)
-	for _, user := range users {
-		userMap[user.Userid] = user
-	}
+
 	for _, document := range documents {
 		log.Infof("Start of task[%d] processing", document.LinkId)
 		missingFromTasks, missingFromExtras, extras, err := compareTaskAndExtraOwners(ctx, document)
@@ -299,8 +287,8 @@ func getProjectUser(projectId int64, userMap *map[int64]*model.User) (projectOwn
 	}
 
 	// 获取成员名称
-	projectOwner = GetUserNames(projectOwnerIds, userMap)
-	projectUser = GetUserNames(projectUserIds, userMap)
+	projectOwner = common.GetUserNames(projectOwnerIds, userMap)
+	projectUser = common.GetUserNames(projectUserIds, userMap)
 	return
 }
 
@@ -388,7 +376,7 @@ func handleTaskStatus(task *model.ProjectTask) string {
 
 	flowItemNames := strings.Split(task.FlowItemName, "|")
 	if len(flowItemNames) > 0 {
-		return flowItemNames[0]
+		return flowItemNames[1]
 	}
 
 	return strings.ReplaceAll(task.FlowItemName, "|", "\\|")
@@ -441,6 +429,7 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 		log.Printf("Error query document %v", err)
 		return err
 	}
+
 	if document != nil && document.LastModifiedAt.Equal(h.task.UpdatedAt) {
 		log.Debugf("Task[#%d]内容没有更新", h.task.ID)
 		if compareTaskExtras(*h.extras, document.LinkExtras) {
@@ -528,23 +517,7 @@ func findTaskUser(taskId int64, userMap *map[int64]*model.User, isOwner bool) st
 			taskOwnerIds = append(taskOwnerIds, taskUser.Userid)
 		}
 	}
-	return GetUserNames(taskOwnerIds, userMap)
-}
-
-// GetUserNames 获取一组用户的名称，使用逗号进行分隔
-func GetUserNames(userIds []int64, userMap *map[int64]*model.User) string {
-	names := make([]string, len(userIds))
-	uMap := *userMap
-	for i, userId := range userIds {
-		user := uMap[userId]
-
-		names[i] = user.Nickname
-		if names[i] == "" {
-			names[i] = user.Email
-		}
-
-	}
-	return strings.Join(names, ",")
+	return common.GetUserNames(taskOwnerIds, userMap)
 }
 
 // generateMarkdown 将 TaskRowText 转换为 Markdown 格式的文本
@@ -555,41 +528,41 @@ func generateMarkdown(task TaskRowText) string {
 	sb.WriteString("# 任务详情\n\n")
 
 	// 任务信息表格
-	sb.WriteString("| 字段            | 内容                     |\n")
-	sb.WriteString("|------------------|---------------------------|\n")
-	sb.WriteString(fmt.Sprintf("| 项目名     | %s                |\n", task.ProjectName))
-	sb.WriteString(fmt.Sprintf("| 项目负责人    | %s                |\n", task.ProjectOwner))
-	sb.WriteString(fmt.Sprintf("| 项目成员     | %s                |\n", task.ProjectUser))
-	sb.WriteString(fmt.Sprintf("| 所属列     | %s                |\n", task.ColumnName))
-	sb.WriteString(fmt.Sprintf("| 任务名        | %s                |\n", task.TaskName))
-	sb.WriteString(fmt.Sprintf("| 任务负责人       | %s                |\n", task.TaskOwner))
-	sb.WriteString(fmt.Sprintf("| 任务协助人员       | %s                |\n", task.TaskAssistant))
-	sb.WriteString(fmt.Sprintf("| 任务描述 | %s                |\n", task.TaskDescription))
-	sb.WriteString(fmt.Sprintf("| 优先级         | %s                |\n", task.Priority))
-	sb.WriteString(fmt.Sprintf("| 子任务数量          | %d                |\n", task.SubNum))
-	sb.WriteString(fmt.Sprintf("| 子任务完成数量     | %d                |\n", task.SubComplete))
-	sb.WriteString(fmt.Sprintf("|  状态      | %s                |\n", task.Status))
+	sb.WriteString(fmt.Sprintf("| %s | %s |\n", "**字段**", "**内容**"))
+	sb.WriteString("|:--|:--|\n")
+	sb.WriteString(fmt.Sprintf("| %s | %s |\n", "项目名", task.ProjectName))
+	sb.WriteString(fmt.Sprintf("| %s | %s |\n", "项目负责人", task.ProjectOwner))
+	sb.WriteString(fmt.Sprintf("| %s | %s |\n", "项目成员", task.ProjectUser))
+	sb.WriteString(fmt.Sprintf("| %s | %s |\n", "所属列", task.ColumnName))
+	sb.WriteString(fmt.Sprintf("| %s | %s |\n", "任务名", task.TaskName))
+	sb.WriteString(fmt.Sprintf("| %s | %s |\n", "任务负责人", task.TaskOwner))
+	sb.WriteString(fmt.Sprintf("| %s | %s |\n", "任务协助人员", task.TaskAssistant))
+	sb.WriteString(fmt.Sprintf("| %s | %s |\n", "任务描述", task.TaskDescription))
+	sb.WriteString(fmt.Sprintf("| %s | %s |\n", "优先级", task.Priority))
+	sb.WriteString(fmt.Sprintf("| %s | %d |\n", "子任务数量", task.SubNum))
+	sb.WriteString(fmt.Sprintf("| %s | %d |\n", "子任务完成数量", task.SubComplete))
+	sb.WriteString(fmt.Sprintf("| %s | %s |\n", "状态", task.Status))
 	if !task.StartAt.IsZero() {
-		sb.WriteString(fmt.Sprintf("| 开始时间         | %s                         |\n", task.StartAt.Format(time.DateTime)))
+		sb.WriteString(fmt.Sprintf("| %s | %s |\n", "开始时间", task.StartAt.Format(time.DateTime)))
 	}
 	if !task.EndAt.IsZero() {
-		sb.WriteString(fmt.Sprintf("| 结束时间          | %s                         |\n", task.EndAt.Format(time.DateTime)))
+		sb.WriteString(fmt.Sprintf("| %s | %s |\n", "结束时间", task.EndAt.Format(time.DateTime)))
 	}
 	if !task.CompleteAt.IsZero() {
-		sb.WriteString(fmt.Sprintf("|  完成时间      | %s                         |\n", task.CompleteAt.Format(time.DateTime)))
+		sb.WriteString(fmt.Sprintf("| %s | %s |\n", "完成时间", task.CompleteAt.Format(time.DateTime)))
 	}
 
 	// 子任务表格
 	if len(task.SubTask) > 0 {
-		sb.WriteString("\n## 子任务\n\n")
-		sb.WriteString("| 名称      | 负责人     | 开始时间           | 结束时间              | 完成时间         |  状态         |\n")
-		sb.WriteString("|-----------|-----------|---------------------|---------------------|---------------------|---------------------|\n")
+		sb.WriteString("\n## 子任务列表\n")
+		sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s |\n", "**名称**", "**负责人**", "**开始时间**", "**结束时间**", "**完成时间**", "**状态**"))
+		sb.WriteString("|:--|:--|:--|:--|:--|:--|\n")
 	}
 
 	for _, subTask := range task.SubTask {
-		startAt := ""
-		endAt := ""
-		completeAt := ""
+		startAt := "-"
+		endAt := "-"
+		completeAt := "-"
 		if !subTask.StartAt.IsZero() {
 			startAt = subTask.StartAt.Format(time.DateTime)
 		}
@@ -610,11 +583,10 @@ func generateMarkdown(task TaskRowText) string {
 	}
 
 	if len(task.Attachment) > 0 {
-		sb.WriteString("\n## 附件\n\n")
+		sb.WriteString("\n## 附件\n")
 		for i, attachment := range task.Attachment {
 			sb.WriteString(fmt.Sprintf("- 附件%d %s \n", i+1, attachment))
 		}
 	}
-
 	return sb.String()
 }
