@@ -76,6 +76,7 @@ func (d *DocumentServiceImpl) RemoveAndUpdateWorkspace(documentId int64, newLoca
 		})
 		if err != nil {
 			log.Errorf("工作区[%s]更新后新增文档[%s]失败: %v", workDocument.WorkspaceSlug, newLocation, err)
+			// log.WithField("documentId", workDocument.DocumentID).Info("文档移动到工作区失败")
 			// 移除记录
 			repo.LlmWorkspaceDocument.WithContext(ctx).Where(repo.LlmWorkspaceDocument.DocumentID.Eq(documentId),
 				repo.LlmWorkspaceDocument.WorkspaceSlug.Eq(workDocument.WorkspaceSlug)).Delete()
@@ -89,7 +90,7 @@ func (d *DocumentServiceImpl) RemoveAndUpdateWorkspace(documentId int64, newLoca
 			}
 		}
 		if !flag {
-			log.Debugf("文档[#%d]移动到工作区失败:", workDocument.DocumentID)
+			log.WithField("documentId", workDocument.DocumentID).Info("文档移动到工作区失败")
 			// 移除记录
 			repo.LlmWorkspaceDocument.WithContext(ctx).Where(repo.LlmWorkspaceDocument.DocumentID.Eq(documentId),
 				repo.LlmWorkspaceDocument.WorkspaceSlug.Eq(workDocument.WorkspaceSlug)).Delete()

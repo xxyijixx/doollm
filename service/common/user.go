@@ -30,7 +30,7 @@ func GetUserNames(userIds []int64, userMap *map[int64]*model.User) string {
 	for i, userId := range userIds {
 		user := uMap[userId]
 		if user == nil {
-			log.Warn("查找不到用户信息, userid:", userId)
+			log.WithField("userId", userId).Warn("查找不到用户信息")
 			continue
 		}
 		names[i] = user.Nickname

@@ -63,7 +63,7 @@ func (r *ReportServiceImpl) Traversal() {
 				return nil
 			}
 			if err := r.updateOrInsertDocument(ctx, report, document, userMap); err != nil {
-				log.Error(err)
+				log.Error("Error update or insert document", err)
 				return nil
 			}
 		}
@@ -103,7 +103,7 @@ func (r *ReportServiceImpl) Update() {
 func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report *model.Report, document *model.LlmDocument, userMap map[int64]*model.User) error {
 	// 更新文档
 	if document != nil && document.LastModifiedAt.Equal(report.UpdatedAt) {
-		log.Debugf("Report[#%d]内容没有更新", report.ID)
+		log.WithField("reportId", report.ID).Debug("report内容没有更新")
 		return nil
 	}
 
@@ -151,7 +151,7 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 	doc := res.Documents[0]
 	if document == nil {
 		// 插入新文档
-		log.Debugf("Report[#%d]内容没有上传", report.ID)
+		log.WithField("reportId", report.ID).Debug("report内容没有上传")
 		newDocument := &model.LlmDocument{
 			LinkType:           linktype.REPORT,
 			LinkId:             report.ID,
@@ -167,7 +167,7 @@ func (fr *ReportServiceImpl) updateOrInsertDocument(ctx context.Context, report 
 		return repo.LlmDocument.WithContext(ctx).Create(newDocument)
 	}
 
-	log.Debugf("Report[#%d]内容存在更新", report.ID)
+	log.WithField("reportId", report.ID).Debug("report内容存在更新")
 	result, err := repo.LlmDocument.WithContext(ctx).
 		Where(repo.LlmDocument.ID.Eq(document.ID)).
 		Updates(&model.LlmDocument{

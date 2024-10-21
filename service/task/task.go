@@ -103,6 +103,11 @@ func (t *TaskServiceImpl) UpdateByTaskOwner() {
 
 	for _, document := range documents {
 		log.Infof("Start of task[%d] processing", document.LinkId)
+		log.WithFields(log.Fields{
+			"documentId": document.ID,
+			"linkId":     document.LinkId,
+			"linkType":   document.LinkType,
+		}).Info("Start of task processing")
 		missingFromTasks, missingFromExtras, extras, err := compareTaskAndExtraOwners(ctx, document)
 		if err != nil {
 			continue
@@ -431,9 +436,9 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 	}
 
 	if document != nil && document.LastModifiedAt.Equal(h.task.UpdatedAt) {
-		log.Debugf("Task[#%d]内容没有更新", h.task.ID)
+		log.WithField("taskId", h.task.ID).Debug("Task内容没有更新")
 		if compareTaskExtras(*h.extras, document.LinkExtras) {
-			log.Debugf("Task[#%d]附加信息没有变更", h.task.ID)
+			log.WithField("taskId", h.task.ID).Debug("Task附加信息没有变更")
 			return nil
 		}
 	}
@@ -452,7 +457,7 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 
 	if document == nil {
 		// 插入新文档
-		log.Debugf("Task[#%d]内容没有上传", h.task.ID)
+		log.WithField("taskId", h.task.ID).Debug("Task内容没有上传")
 		newDocument := &model.LlmDocument{
 			LinkType:           linktype.TASK,
 			LinkId:             h.task.ID,
@@ -469,7 +474,7 @@ func (h *ProjectTaskHandle) updateOrInsertDocument() error {
 		return repo.LlmDocument.WithContext(h.ctx).Create(newDocument)
 	}
 
-	log.Debugf("Task[#%d]内容存在更新", h.task.ID)
+	log.WithField("taskId", h.task.ID).Debugf("Task内容存在更新")
 	result, err := repo.LlmDocument.WithContext(h.ctx).
 		Where(repo.LlmDocument.ID.Eq(document.ID)).
 		Updates(&model.LlmDocument{

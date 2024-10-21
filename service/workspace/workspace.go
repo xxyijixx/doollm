@@ -63,10 +63,13 @@ func (w *WorkspaceServiceImpl) GetWorkspaceUser() ([]*model.LlmWorkspace, map[in
 }
 
 func (w *WorkspaceServiceImpl) Upload(userid int64, documentId int64) error {
-	log.Debugf("正在上传 userid=%d, documentId=%d", userid, documentId)
+	log.WithFields(log.Fields{
+		"userId":     userid,
+		"documentId": documentId,
+	}).Debug("正在上传至工作区")
 	var err error
 	if !w.Verify(userid) {
-		log.Debugf("用户[#%d]没有工作区权限", userid)
+		log.WithField("userId", userid).Debugf("用户没有工作区权限")
 		return fmt.Errorf("%v", "用户没有工作区权限")
 	}
 	ctx := context.Background()
@@ -123,7 +126,10 @@ func (w *WorkspaceServiceImpl) Upload(userid int64, documentId int64) error {
 }
 
 func (w *WorkspaceServiceImpl) RemoveDocument(userid int64, documentId int64) error {
-	log.Debugf("移除文档UserId=%d, documentId=%d", userid, documentId)
+	log.WithFields(log.Fields{
+		"userId":     userid,
+		"documentId": documentId,
+	}).Debug("移除文档")
 	ctx := context.Background()
 	workspace, err := w.SelectByUserId(userid)
 	if err != nil {

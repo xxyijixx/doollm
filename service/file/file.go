@@ -9,7 +9,6 @@ import (
 	"doollm/service/document"
 	linktype "doollm/service/document/type"
 	"doollm/service/workspace"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -137,7 +136,7 @@ func (f *FileServiceImpl) Delete(fileId int64) {
 	document, err := repo.LlmDocument.WithContext(ctx).Where(repo.LlmDocument.LinkType.Eq(linktype.FILE), repo.LlmDocument.LinkId.Eq(fileId)).First()
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			log.Debugf("未找到文件[%d]相关文档信息", fileId)
+			log.WithField("fileId", fileId).Debug("未找到文件相关文档信息")
 		}
 		return
 	}
@@ -146,12 +145,12 @@ func (f *FileServiceImpl) Delete(fileId int64) {
 
 // Update 文件访问权限变更，更新用户工作区
 func (f *FileServiceImpl) Update(fileId int64) {
-	log.Debugf("正在处理用户文件更新 fileid=%d", fileId)
+	log.WithField("fileId", fileId).Debug("正在处理用户文件更新")
 	ctx := context.Background()
 	file, err := repo.File.WithContext(ctx).Where(repo.File.ID.Eq(fileId)).First()
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			log.Debugf("未找到相关文件信息, fileId: %d", fileId)
+			log.WithField("fileId", fileId).Debug("未找到相关文件信息")
 		}
 		return
 	}
@@ -196,7 +195,7 @@ func (f *FileServiceImpl) Update(fileId int64) {
 func updateFile(ctx context.Context, file *model.File, permissionDeniedUser []int64, fileUserMap map[int64]interface{}, allFlag bool, userWorkspaceMap map[int64]*model.LlmWorkspace) {
 	// 判断文件类型是否支持
 	if !isSupport(file) {
-		log.Debugf("文件[#%d]不支持的文件类型: %s", file.ID, file.Type)
+		log.WithFields(log.Fields{"fileId": file.ID, "fileType": file.Type}).Debug("文件类型不支持")
 		return
 	}
 
@@ -205,10 +204,10 @@ func updateFile(ctx context.Context, file *model.File, permissionDeniedUser []in
 		First()
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			log.Debugf("未找到文件[#%d]相关文档信息", file.ID)
+			log.WithField("fileId", file.ID).Debug("未找到文件相关文档信息")
 			return
 		}
-		log.Debugf("错误查询文件[#%d]对应的文档信息: %v", file.ID, err)
+		log.WithField("fileId", file.ID).Debugf("错误查询文件对应的文档信息: %v", err)
 		return
 	}
 	// 如果共享所有人，对所有用户工作区上传，否则单个上传
@@ -278,7 +277,11 @@ func (f *FileServiceImpl) ClearNotExistFile() {
 
 	for _, document := range documents {
 		if _, exist := fileIdsMap[document.LinkId]; !exist {
-			log.Debugf("文档[#%d]对应的文件[#%d]不存在，移除文档", document.ID, document.LinkId)
+			log.WithFields(log.Fields{
+				"documentId": document.ID,
+				"linkId":     document.LinkId,
+				"linkType":   document.LinkType,
+			}).Debug("文档对应的文件不存在，移除文档")
 			// 在文档信息中找不到对应的文件ID
 			documentService.Remove(document.ID)
 		}
@@ -348,7 +351,7 @@ func VerifyTxtFile(fileContent *model.FileContent) bool {
 
 	// 判断是否超过10万字符
 	if charCount > MaxTxtLen {
-		fmt.Printf("文件包含 %d 个字符，超过10万字符。\n", charCount)
+		log.Debugf("文件包含 %d 个字符，超过10万字符。\n", charCount)
 		return false
 	}
 	return true
@@ -357,14 +360,17 @@ func VerifyTxtFile(fileContent *model.FileContent) bool {
 // updateOrInsertDocument 根据文件是否已上传和文件内容是否更新判断是否进行上传或更新
 func (f *FileServiceImpl) updateOrInsertDocument(ctx context.Context, file *model.File, content Content, document *model.LlmDocument) error {
 	if document != nil && document.LastModifiedAt.Equal(file.UpdatedAt) {
-		log.Debugf("File[#%d]没有更新", file.ID)
+		log.WithField("fileId", file.ID).Debug("File没有更新")
 		return nil
 	}
 	filePath := config.PublicPath(content.URL)
-	log.Infof("正在上传文件 ID=%v filPath=%v", file.ID, filePath)
+	log.WithFields(log.Fields{
+		"fileId": file.ID,
+		"path":   filePath,
+	}).Info("正在上传文件")
 	res, err := anythingllmClient.DocumentUpload(filePath, file.Ext)
 	if err != nil || !res.Success {
-		log.Errorf("上传文件失败: %v", err)
+		log.WithField("fileId", file.ID).Errorf("上传文件失败: %v", err)
 		return err
 	}
 	if len(res.Documents) == 0 {
@@ -373,7 +379,7 @@ func (f *FileServiceImpl) updateOrInsertDocument(ctx context.Context, file *mode
 	doc := res.Documents[0]
 	if document == nil {
 		// 插入新文档
-		log.Debugf("File[#%d]没有上传", file.ID)
+		log.WithField("fileId", file.ID).Debug("File没有上传", file.ID)
 		newDocument := &model.LlmDocument{
 			LinkType:           linktype.FILE,
 			LinkId:             file.ID,
@@ -389,7 +395,7 @@ func (f *FileServiceImpl) updateOrInsertDocument(ctx context.Context, file *mode
 		return repo.LlmDocument.WithContext(ctx).Create(newDocument)
 	}
 	// 更新文档
-	log.Debugf("File[#%d]存在更新", file.ID)
+	log.WithField("fileId", file.ID).Debug("File存在更新", file.ID)
 	result, err := repo.LlmDocument.WithContext(ctx).
 		Where(repo.LlmDocument.ID.Eq(document.ID)).
 		Updates(&model.LlmDocument{
@@ -410,7 +416,7 @@ func (f *FileServiceImpl) updateOrInsertDocument(ctx context.Context, file *mode
 func handleFileAuth(fileId int64) {
 	ctx := context.Background()
 	file, err := repo.File.WithContext(ctx).Where(repo.File.ID.Eq(fileId)).First()
-	log.Infof("正在处理文件[#%v]共享情况", fileId)
+	log.WithField("fileId", fileId).Info("正在处理文件共享情况", fileId)
 	if err != nil {
 		log.Debugf("Error query file %v", err)
 		return
@@ -439,7 +445,7 @@ func handleFileAuth(fileId int64) {
 				log.Errorf("查询文件共享用户失败: %v", err)
 				return
 			}
-			log.Debugf("文件[#%v]不存在共享", file.ID)
+			log.WithField("fileId", fileId).Info("文件不存在共享")
 		} else {
 			if fileUsers[0].Userid == 0 {
 				// 共享所有人
@@ -455,7 +461,10 @@ func handleFileAuth(fileId int64) {
 	} else {
 		// 对于非位于顶级目录的文件
 		shareUserIds, _ := GetFileShareUserList(file)
-		log.Debugf("文件[#%v]共享用户：%v", file.ID, shareUserIds)
+		log.WithFields(log.Fields{
+			"fileId":       fileId,
+			"shareUserIds": shareUserIds,
+		}).Info("文件共享用户")
 		for _, userid := range shareUserIds {
 			workspaceService.Upload(userid, document.ID)
 		}
@@ -471,7 +480,7 @@ func GetFileShareUserList(file *model.File) ([]int64, bool) {
 	shareUsers := make([]int64, 0)
 	pids := file.Pids
 	parts := strings.Split(strings.Trim(pids, ","), ",")
-	parts = append([]string{string(file.ID)}, parts...)
+	parts = append([]string{strconv.FormatInt(file.ID, 10)}, parts...)
 	for _, part := range parts {
 		fileId, err := strconv.ParseInt(part, 10, 64)
 		if err != nil {
