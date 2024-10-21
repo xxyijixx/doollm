@@ -39,7 +39,7 @@ func newLlmWorkspaceDocument(db *gorm.DB, opts ...gen.DOOption) llmWorkspaceDocu
 }
 
 type llmWorkspaceDocument struct {
-	llmWorkspaceDocumentDo llmWorkspaceDocumentDo
+	llmWorkspaceDocumentDo
 
 	ALL           field.Asterisk
 	ID            field.Int64
@@ -72,18 +72,6 @@ func (l *llmWorkspaceDocument) updateTableName(table string) *llmWorkspaceDocume
 	l.fillFieldMap()
 
 	return l
-}
-
-func (l *llmWorkspaceDocument) WithContext(ctx context.Context) ILlmWorkspaceDocumentDo {
-	return l.llmWorkspaceDocumentDo.WithContext(ctx)
-}
-
-func (l llmWorkspaceDocument) TableName() string { return l.llmWorkspaceDocumentDo.TableName() }
-
-func (l llmWorkspaceDocument) Alias() string { return l.llmWorkspaceDocumentDo.Alias() }
-
-func (l llmWorkspaceDocument) Columns(cols ...field.Expr) gen.Columns {
-	return l.llmWorkspaceDocumentDo.Columns(cols...)
 }
 
 func (l *llmWorkspaceDocument) GetFieldByName(fieldName string) (field.OrderExpr, bool) {

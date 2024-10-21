@@ -40,7 +40,7 @@ func newWorkspacePermission(db *gorm.DB, opts ...gen.DOOption) workspacePermissi
 }
 
 type workspacePermission struct {
-	workspacePermissionDo workspacePermissionDo
+	workspacePermissionDo
 
 	ALL         field.Asterisk
 	ID          field.Int64
@@ -75,18 +75,6 @@ func (w *workspacePermission) updateTableName(table string) *workspacePermission
 	w.fillFieldMap()
 
 	return w
-}
-
-func (w *workspacePermission) WithContext(ctx context.Context) IWorkspacePermissionDo {
-	return w.workspacePermissionDo.WithContext(ctx)
-}
-
-func (w workspacePermission) TableName() string { return w.workspacePermissionDo.TableName() }
-
-func (w workspacePermission) Alias() string { return w.workspacePermissionDo.Alias() }
-
-func (w workspacePermission) Columns(cols ...field.Expr) gen.Columns {
-	return w.workspacePermissionDo.Columns(cols...)
 }
 
 func (w *workspacePermission) GetFieldByName(fieldName string) (field.OrderExpr, bool) {

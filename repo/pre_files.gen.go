@@ -49,7 +49,7 @@ func newFile(db *gorm.DB, opts ...gen.DOOption) file {
 }
 
 type file struct {
-	fileDo fileDo
+	fileDo
 
 	ALL       field.Asterisk
 	ID        field.Int64
@@ -103,14 +103,6 @@ func (f *file) updateTableName(table string) *file {
 
 	return f
 }
-
-func (f *file) WithContext(ctx context.Context) IFileDo { return f.fileDo.WithContext(ctx) }
-
-func (f file) TableName() string { return f.fileDo.TableName() }
-
-func (f file) Alias() string { return f.fileDo.Alias() }
-
-func (f file) Columns(cols ...field.Expr) gen.Columns { return f.fileDo.Columns(cols...) }
 
 func (f *file) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 	_f, ok := f.fieldMap[fieldName]

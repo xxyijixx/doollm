@@ -9,7 +9,7 @@ import (
 func main() {
 	g := gen.NewGenerator(gen.Config{
 		OutPath: "../",
-		Mode:    gen.WithDefaultQuery | gen.WithQueryInterface, // generate mode
+		Mode:    gen.WithDefaultQuery | gen.WithoutContext | gen.WithQueryInterface, // generate mode
 	})
 
 	// dsn := config.EnvConfig.GetDSN()

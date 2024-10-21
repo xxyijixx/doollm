@@ -40,7 +40,7 @@ func newFileUser(db *gorm.DB, opts ...gen.DOOption) fileUser {
 }
 
 type fileUser struct {
-	fileUserDo fileUserDo
+	fileUserDo
 
 	ALL        field.Asterisk
 	ID         field.Int64
@@ -76,14 +76,6 @@ func (f *fileUser) updateTableName(table string) *fileUser {
 
 	return f
 }
-
-func (f *fileUser) WithContext(ctx context.Context) IFileUserDo { return f.fileUserDo.WithContext(ctx) }
-
-func (f fileUser) TableName() string { return f.fileUserDo.TableName() }
-
-func (f fileUser) Alias() string { return f.fileUserDo.Alias() }
-
-func (f fileUser) Columns(cols ...field.Expr) gen.Columns { return f.fileUserDo.Columns(cols...) }
 
 func (f *fileUser) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 	_f, ok := f.fieldMap[fieldName]

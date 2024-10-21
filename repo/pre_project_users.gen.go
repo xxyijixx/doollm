@@ -41,7 +41,7 @@ func newProjectUser(db *gorm.DB, opts ...gen.DOOption) projectUser {
 }
 
 type projectUser struct {
-	projectUserDo projectUserDo
+	projectUserDo
 
 	ALL       field.Asterisk
 	ID        field.Int64
@@ -79,16 +79,6 @@ func (p *projectUser) updateTableName(table string) *projectUser {
 
 	return p
 }
-
-func (p *projectUser) WithContext(ctx context.Context) IProjectUserDo {
-	return p.projectUserDo.WithContext(ctx)
-}
-
-func (p projectUser) TableName() string { return p.projectUserDo.TableName() }
-
-func (p projectUser) Alias() string { return p.projectUserDo.Alias() }
-
-func (p projectUser) Columns(cols ...field.Expr) gen.Columns { return p.projectUserDo.Columns(cols...) }
 
 func (p *projectUser) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 	_f, ok := p.fieldMap[fieldName]

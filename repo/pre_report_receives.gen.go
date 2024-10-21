@@ -39,7 +39,7 @@ func newReportReceive(db *gorm.DB, opts ...gen.DOOption) reportReceive {
 }
 
 type reportReceive struct {
-	reportReceiveDo reportReceiveDo
+	reportReceiveDo
 
 	ALL         field.Asterisk
 	ID          field.Int64
@@ -72,18 +72,6 @@ func (r *reportReceive) updateTableName(table string) *reportReceive {
 	r.fillFieldMap()
 
 	return r
-}
-
-func (r *reportReceive) WithContext(ctx context.Context) IReportReceiveDo {
-	return r.reportReceiveDo.WithContext(ctx)
-}
-
-func (r reportReceive) TableName() string { return r.reportReceiveDo.TableName() }
-
-func (r reportReceive) Alias() string { return r.reportReceiveDo.Alias() }
-
-func (r reportReceive) Columns(cols ...field.Expr) gen.Columns {
-	return r.reportReceiveDo.Columns(cols...)
 }
 
 func (r *reportReceive) GetFieldByName(fieldName string) (field.OrderExpr, bool) {

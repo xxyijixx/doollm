@@ -39,7 +39,7 @@ func newLlmWorkspace(db *gorm.DB, opts ...gen.DOOption) llmWorkspace {
 }
 
 type llmWorkspace struct {
-	llmWorkspaceDo llmWorkspaceDo
+	llmWorkspaceDo
 
 	ALL       field.Asterisk
 	ID        field.Int64
@@ -72,18 +72,6 @@ func (l *llmWorkspace) updateTableName(table string) *llmWorkspace {
 	l.fillFieldMap()
 
 	return l
-}
-
-func (l *llmWorkspace) WithContext(ctx context.Context) ILlmWorkspaceDo {
-	return l.llmWorkspaceDo.WithContext(ctx)
-}
-
-func (l llmWorkspace) TableName() string { return l.llmWorkspaceDo.TableName() }
-
-func (l llmWorkspace) Alias() string { return l.llmWorkspaceDo.Alias() }
-
-func (l llmWorkspace) Columns(cols ...field.Expr) gen.Columns {
-	return l.llmWorkspaceDo.Columns(cols...)
 }
 
 func (l *llmWorkspace) GetFieldByName(fieldName string) (field.OrderExpr, bool) {

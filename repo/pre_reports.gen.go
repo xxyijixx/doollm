@@ -42,7 +42,7 @@ func newReport(db *gorm.DB, opts ...gen.DOOption) report {
 }
 
 type report struct {
-	reportDo reportDo
+	reportDo
 
 	ALL       field.Asterisk
 	ID        field.Int64
@@ -82,14 +82,6 @@ func (r *report) updateTableName(table string) *report {
 
 	return r
 }
-
-func (r *report) WithContext(ctx context.Context) IReportDo { return r.reportDo.WithContext(ctx) }
-
-func (r report) TableName() string { return r.reportDo.TableName() }
-
-func (r report) Alias() string { return r.reportDo.Alias() }
-
-func (r report) Columns(cols ...field.Expr) gen.Columns { return r.reportDo.Columns(cols...) }
 
 func (r *report) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 	_f, ok := r.fieldMap[fieldName]

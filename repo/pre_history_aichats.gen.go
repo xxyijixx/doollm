@@ -42,7 +42,7 @@ func newHistoryChat(db *gorm.DB, opts ...gen.DOOption) historyChat {
 }
 
 type historyChat struct {
-	historyChatDo historyChatDo
+	historyChatDo
 
 	ALL          field.Asterisk
 	ID           field.Int64
@@ -82,16 +82,6 @@ func (h *historyChat) updateTableName(table string) *historyChat {
 
 	return h
 }
-
-func (h *historyChat) WithContext(ctx context.Context) IHistoryChatDo {
-	return h.historyChatDo.WithContext(ctx)
-}
-
-func (h historyChat) TableName() string { return h.historyChatDo.TableName() }
-
-func (h historyChat) Alias() string { return h.historyChatDo.Alias() }
-
-func (h historyChat) Columns(cols ...field.Expr) gen.Columns { return h.historyChatDo.Columns(cols...) }
 
 func (h *historyChat) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 	_f, ok := h.fieldMap[fieldName]
